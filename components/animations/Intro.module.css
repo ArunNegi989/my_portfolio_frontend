@@ -1,0 +1,246 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  perspective: 900px;
+  color: var(--text);
+}
+
+.curtain {
+  position: absolute;
+  top: -4%;
+  bottom: -4%;
+  width: 50.5%;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.022) 0 2px, transparent 2px 46px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.35) 0 18px, transparent 18px 46px),
+    linear-gradient(180deg, #07090d 0%, #0b0e14 55%, #06070a 100%);
+  will-change: transform;
+}
+
+.curtainLeft {
+  left: 0;
+  transform-origin: left center;
+  box-shadow: inset -1px 0 0 rgba(34, 228, 255, 0.45), 18px 0 60px rgba(0, 0, 0, 0.6);
+}
+
+.curtainRight {
+  right: 0;
+  transform-origin: right center;
+  box-shadow: inset 1px 0 0 rgba(34, 228, 255, 0.45), -18px 0 60px rgba(0, 0, 0, 0.6);
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(34, 228, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 228, 255, 0.06) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.words {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2em;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.lineName,
+.lineExe {
+  display: flex;
+  white-space: nowrap;
+  line-height: 0.9;
+}
+
+.lineName {
+  font-family: var(--font-display);
+  font-size: clamp(3.4rem, 14vw, 12.5rem);
+  letter-spacing: 0.01em;
+  color: var(--text);
+  text-shadow: 0 0 40px rgba(34, 228, 255, 0.25);
+}
+
+.lineExe {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: clamp(1.15rem, 4.6vw, 3.8rem);
+  letter-spacing: 0.12em;
+  color: var(--cyan);
+  text-shadow: 0 0 24px var(--cyan-glow);
+}
+
+.char {
+  position: relative;
+  display: inline-block;
+}
+
+.sizer {
+  visibility: hidden;
+}
+
+.shard {
+  position: absolute;
+  inset: 0;
+  will-change: transform, opacity;
+}
+
+.space {
+  display: inline-block;
+  width: 0.3em;
+}
+
+.characterLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.character {
+  position: absolute;
+  left: calc(50% - 100px);
+  top: calc(50% - 150px);
+  width: 200px;
+  transform-origin: 50% -200px;
+}
+
+.cable {
+  position: absolute;
+  left: calc(50% - 1px);
+  bottom: calc(100% - 4px);
+  width: 2px;
+  height: 120vh;
+  background: linear-gradient(180deg, transparent, rgba(34, 228, 255, 0.7));
+}
+
+.characterSvg {
+  width: 200px;
+  height: 250px;
+  overflow: visible;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 22px rgba(34, 228, 255, 0.18));
+}
+
+.rope {
+  position: absolute;
+  left: calc(50% + 80px);
+  top: 0;
+  height: calc(50% - 36px);
+  width: 3px;
+}
+
+.ropeLine {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(180deg, #c9a86a 0 6px, #8f733f 6px 10px);
+  border-radius: 2px;
+}
+
+.tassel {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 18px;
+  height: 34px;
+  transform: translateX(-50%);
+  border-radius: 6px 6px 9px 9px;
+  background:
+    repeating-linear-gradient(90deg, #d7b773 0 2px, #9e7f45 2px 4px);
+  box-shadow: 0 0 0 2px #0a0d12, 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+.tassel::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 12px;
+  height: 8px;
+  transform: translateX(-50%);
+  border-radius: 4px;
+  background: var(--lime);
+}
+
+.hud {
+  position: absolute;
+  left: var(--gutter);
+  bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+.progress {
+  display: block;
+  width: 160px;
+  height: 2px;
+  background: var(--line-strong);
+  overflow: hidden;
+}
+
+.progressBar {
+  display: block;
+  height: 100%;
+  background: var(--cyan);
+  transform-origin: left;
+}
+
+.skip {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: rgba(10, 13, 18, 0.7);
+  backdrop-filter: blur(8px);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.skip:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+@media (max-width: 640px) {
+  /* Smaller character: the hand lands at (center + 65px, top + 92px) of a 160px-wide SVG. */
+  .character {
+    left: calc(50% - 80px);
+    width: 160px;
+  }
+
+  .characterSvg {
+    width: 160px;
+    height: 200px;
+  }
+
+  .rope {
+    left: calc(50% + 64px);
+    height: calc(50% - 60px);
+  }
+}

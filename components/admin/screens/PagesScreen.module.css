@@ -1,0 +1,65 @@
+.sections {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.section {
+  padding: 4px 14px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-2);
+}
+
+.picked {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.picked li {
+  padding: 6px 6px 6px 10px;
+  font-size: 0.88rem;
+}
+
+.pickIndex {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--cyan-soft);
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.heroPreview {
+  display: grid;
+  gap: 6px;
+  padding: 20px;
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 80% 20%, var(--cyan-soft), transparent 60%),
+    var(--bg);
+}
+
+.previewRole {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
+  color: var(--cyan);
+}
+
+.previewName {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  line-height: 0.9;
+}
+
+.previewHeadline {
+  font-size: 0.95rem;
+  font-weight: 600;
+}

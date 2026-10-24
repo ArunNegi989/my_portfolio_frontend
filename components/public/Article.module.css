@@ -1,0 +1,92 @@
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 150;
+  height: 3px;
+  background: linear-gradient(90deg, var(--cyan), var(--violet));
+  transform-origin: left;
+}
+
+.toc {
+  position: sticky;
+  top: calc(var(--nav-h) + 24px);
+  display: grid;
+  gap: 14px;
+}
+
+.tocTitle,
+.shareTitle {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.toc ol {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  border-left: 1px solid var(--line);
+}
+
+.tocLink {
+  display: block;
+  margin-left: -1px;
+  padding: 7px 0 7px 16px;
+  border-left: 2px solid transparent;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--muted);
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tocLink:hover {
+  color: var(--text);
+}
+
+.tocActive {
+  color: var(--cyan);
+  border-left-color: var(--cyan);
+}
+
+.tocSub .tocLink {
+  padding-left: 30px;
+  font-size: 0.84rem;
+}
+
+.share {
+  display: grid;
+  gap: 12px;
+}
+
+.shareLinks {
+  display: flex;
+  gap: 8px;
+}
+
+.shareLinks a,
+.shareLinks button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-dim);
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.shareLinks a:hover,
+.shareLinks button:hover {
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.xMark {
+  font-size: 1rem;
+  line-height: 1;
+}

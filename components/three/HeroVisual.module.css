@@ -1,0 +1,91 @@
+.visual {
+  position: absolute;
+  inset: 0;
+}
+
+.fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.orb {
+  width: min(52vw, 300px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.35), transparent 22%),
+    radial-gradient(circle at 60% 65%, rgba(139, 92, 246, 0.55), transparent 50%),
+    radial-gradient(circle at 40% 40%, #0f5466, #071017 70%);
+  box-shadow:
+    0 0 80px rgba(34, 228, 255, 0.25),
+    inset -20px -30px 60px rgba(0, 0, 0, 0.6);
+}
+
+.ring {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid rgba(34, 228, 255, 0.45);
+}
+
+.ringA {
+  width: min(84vw, 470px);
+  transform: rotateX(70deg) rotateZ(20deg);
+}
+
+.ringB {
+  width: min(96vw, 540px);
+  border-color: rgba(139, 92, 246, 0.45);
+  transform: rotateX(60deg) rotateY(25deg);
+}
+
+.orbit {
+  --spin: 0deg;
+  position: absolute;
+  width: min(80vw, 440px);
+  aspect-ratio: 1;
+}
+
+.chip {
+  --angle: calc(360deg / var(--n) * var(--i) + var(--spin));
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  padding: 5px 11px;
+  border: 1px solid rgba(34, 228, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(5, 8, 12, 0.8);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  transform: translate(-50%, -50%) rotate(var(--angle)) translateX(min(40vw, 220px)) rotate(calc(var(--angle) * -1));
+}
+
+.animated .orb {
+  animation: breathe 6s ease-in-out infinite;
+}
+
+.animated .orbit {
+  animation: spin 40s linear infinite;
+}
+
+@keyframes breathe {
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+/* Animating a registered angle keeps each chip upright while it orbits. */
+@property --spin {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0deg;
+}
+
+@keyframes spin {
+  to {
+    --spin: 360deg;
+  }
+}

@@ -1,0 +1,7 @@
+.page {
+  padding-top: var(--nav-h);
+}
+
+.page > section {
+  border-top: 0;
+}

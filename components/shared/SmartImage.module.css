@@ -1,0 +1,71 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.image {
+  object-fit: cover;
+}
+
+/* Image reveal: a curtain wipes up once the image has loaded. JS-only (html[data-intro] is set by the
+   boot script), and it never changes the image's own opacity/transform, so card hover effects and
+   LCP are unaffected. */
+:global(html[data-intro]) .wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  transform-origin: top;
+  transition: transform 1s var(--ease-in-out);
+  pointer-events: none;
+}
+
+:global(html[data-intro]) .revealed::before {
+  transform: scaleY(0);
+}
+
+.wrapper > .fallback {
+  z-index: 2;
+}
+
+/* Shimmer placeholder while the image is downloading. */
+.loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.05) 50%, transparent 70%);
+  background-size: 220% 100%;
+  animation: shimmer 1.4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+.fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 30% 30%, var(--cyan-soft), transparent 55%),
+    radial-gradient(circle at 75% 70%, var(--violet-soft), transparent 55%),
+    var(--surface-2);
+}
+
+.fallback span {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  color: var(--line-strong);
+}

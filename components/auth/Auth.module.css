@@ -1,0 +1,403 @@
+/* Auth card + form styles (login, signup, forgot password). */
+
+.card {
+  --form-gap: 18px;
+  position: relative;
+  width: min(100%, 440px);
+  padding: clamp(22px, 5vw, 40px);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(21, 25, 34, 0.88), rgba(12, 14, 19, 0.94));
+  box-shadow:
+    0 40px 120px -40px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: cardIn 0.8s var(--ease-out) both;
+}
+
+.wide {
+  width: min(100%, 500px);
+}
+
+/* Cyan light along the top edge. */
+.card::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 28px;
+  right: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  box-shadow: 0 0 18px var(--cyan-glow);
+}
+
+/* Each block of the card fades in just after the previous one. */
+.card > * {
+  animation: fadeUp 0.6s var(--ease-out) both;
+}
+
+.card > :nth-child(1) {
+  animation-delay: 0.12s;
+}
+
+.card > :nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.card > :nth-child(3) {
+  animation-delay: 0.28s;
+}
+
+.card > :nth-child(4) {
+  animation-delay: 0.36s;
+}
+
+/* Header */
+.badge {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(34, 228, 255, 0.3);
+  border-radius: 14px;
+  background: var(--cyan-soft);
+  color: var(--cyan);
+  box-shadow: 0 0 32px -6px var(--cyan-glow);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+.title {
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.1rem, 7vw, 2.9rem);
+  line-height: 0.95;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+
+.description {
+  margin-top: 12px;
+  color: var(--text-dim);
+}
+
+.demo {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(255, 200, 92, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 200, 92, 0.06);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.demo svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--warning);
+}
+
+.demo strong {
+  color: var(--text);
+}
+
+/* Form */
+.form {
+  display: grid;
+  gap: var(--form-gap);
+  margin-top: 24px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  padding: 12px 14px 12px 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.025);
+  /* 1rem keeps iOS from zooming into the field on focus. */
+  font-size: 1rem;
+  transition:
+    border-color 0.25s,
+    box-shadow 0.25s,
+    background 0.25s;
+}
+
+.input::placeholder {
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+.input:hover {
+  border-color: rgba(255, 255, 255, 0.26);
+}
+
+.input:focus,
+.input:focus-visible {
+  outline: none;
+  border-color: var(--cyan);
+  background: rgba(34, 228, 255, 0.04);
+  box-shadow: 0 0 0 4px var(--cyan-soft);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.input[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 4px rgba(255, 92, 122, 0.16);
+}
+
+/* Keep browser autofill on the dark theme. */
+.input:-webkit-autofill {
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  box-shadow: 0 0 0 1000px var(--surface-2) inset;
+}
+
+.leadIcon {
+  position: absolute;
+  left: 14px;
+  display: inline-flex;
+  color: var(--muted);
+  pointer-events: none;
+  transition: color 0.25s;
+}
+
+.control:focus-within .leadIcon {
+  color: var(--cyan);
+}
+
+.hasToggle .input {
+  padding-right: 52px;
+}
+
+.toggle {
+  position: absolute;
+  right: 3px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  transition:
+    color 0.2s,
+    background 0.2s;
+}
+
+.toggle:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.toggle[aria-pressed="true"] {
+  color: var(--cyan);
+}
+
+.toggle:focus-visible {
+  outline-offset: -2px;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--danger);
+  animation: fadeUp 0.25s var(--ease-out) both;
+}
+
+.error svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.rules li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.25s;
+}
+
+.ruleMet {
+  color: var(--success);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-block: -6px;
+}
+
+.checkField {
+  display: grid;
+  gap: 4px;
+}
+
+.check {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-block: 11px;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.check input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--cyan);
+  cursor: pointer;
+}
+
+.check input[aria-invalid="true"] {
+  outline: 1px solid var(--danger);
+  outline-offset: 1px;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--cyan);
+  text-underline-offset: 4px;
+  transition: color 0.2s;
+}
+
+.link:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.submit {
+  width: 100%;
+  min-height: 52px;
+  /* The shared button never wraps; on 320px screens the longer labels need to. */
+  white-space: normal;
+  text-align: center;
+}
+
+.submit[aria-disabled="true"] {
+  cursor: progress;
+  opacity: 0.85;
+  transform: none;
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+/* The live region stays mounted so screen readers announce results; it takes no space while empty. */
+.resultSlot:empty {
+  margin-top: calc(var(--form-gap) * -1);
+}
+
+.result {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(34, 228, 255, 0.3);
+  border-radius: var(--radius);
+  background: var(--cyan-soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+  animation: fadeUp 0.4s var(--ease-out) both;
+}
+
+.result svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--cyan);
+}
+
+.resultTitle {
+  margin-bottom: 2px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.footer {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--text-dim);
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

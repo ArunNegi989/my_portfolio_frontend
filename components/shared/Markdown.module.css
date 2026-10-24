@@ -1,0 +1,137 @@
+.prose {
+  font-size: 1.075rem;
+  line-height: 1.8;
+  color: var(--text-dim);
+}
+
+.prose > * + * {
+  margin-top: 1.25em;
+}
+
+.prose h2,
+.prose h3 {
+  color: var(--text);
+  line-height: 1.2;
+  scroll-margin-top: calc(var(--nav-h) + 24px);
+}
+
+.prose h2 {
+  margin-top: 2.4em;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.prose h3 {
+  margin-top: 1.8em;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.prose a {
+  color: var(--cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.prose strong {
+  color: var(--text);
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.3em;
+}
+
+.prose li + li {
+  margin-top: 0.45em;
+}
+
+.prose li::marker {
+  color: var(--cyan);
+}
+
+.prose blockquote {
+  padding: 1.1em 1.4em;
+  border-left: 3px solid var(--cyan);
+  background: linear-gradient(90deg, var(--cyan-soft), transparent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--text);
+}
+
+.prose :not(pre) > code {
+  padding: 0.12em 0.4em;
+  border-radius: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  color: var(--lime);
+}
+
+.prose figure img {
+  width: 100%;
+  border-radius: var(--radius);
+}
+
+.prose figcaption {
+  margin-top: 0.6em;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.codeBlock {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #07090d;
+  overflow: hidden;
+}
+
+.codeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 8px 16px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.copy:hover {
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.codeBlock pre {
+  margin: 0;
+  padding: 18px 20px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: #d6deeb;
+}

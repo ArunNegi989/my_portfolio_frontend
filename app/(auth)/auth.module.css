@@ -1,0 +1,184 @@
+.shell {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+/* Background: drifting grid, two soft glows and slow geometric outlines. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, black 15%, transparent 75%);
+  opacity: 0.7;
+  animation: gridDrift 40s linear infinite;
+}
+
+.orb {
+  position: absolute;
+  width: min(70vw, 560px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  animation: float 18s ease-in-out infinite alternate;
+}
+
+.orbCyan {
+  top: -20%;
+  left: -14%;
+  background: radial-gradient(circle, var(--cyan-glow), transparent 65%);
+}
+
+.orbViolet {
+  right: -16%;
+  bottom: -24%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.4), transparent 65%);
+  animation-delay: -9s;
+}
+
+.shape {
+  position: absolute;
+  border: 1px solid rgba(34, 228, 255, 0.2);
+  border-radius: 6px;
+  animation: spin 48s linear infinite;
+}
+
+.shapeLarge {
+  top: 16%;
+  right: 10%;
+  width: 150px;
+  height: 150px;
+}
+
+.shapeSmall {
+  bottom: 14%;
+  left: 9%;
+  width: 72px;
+  height: 72px;
+  border-color: var(--line-strong);
+  animation-duration: 30s;
+  animation-direction: reverse;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px var(--gutter);
+}
+
+.logo {
+  display: inline-flex;
+  align-items: flex-end;
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.logo > span:not(.logoDot) {
+  transition:
+    transform 0.45s var(--ease-out),
+    color 0.3s;
+}
+
+.logo:hover > span:first-child {
+  transform: translateY(-4px) rotate(-6deg);
+  color: var(--cyan);
+}
+
+.logo:hover .logoN {
+  transform: translateY(3px) rotate(5deg);
+}
+
+.logoDot {
+  width: 8px;
+  height: 8px;
+  margin: 0 0 4px 3px;
+  border-radius: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 14px var(--cyan-glow);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+
+.back:hover {
+  color: var(--cyan);
+}
+
+.main {
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 3vw, 32px) var(--gutter) clamp(32px, 5vw, 56px);
+}
+
+.footnote {
+  padding: 0 var(--gutter) 24px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .shape {
+    display: none;
+  }
+
+  .top {
+    padding-block: 12px;
+  }
+}
+
+@keyframes gridDrift {
+  to {
+    background-position:
+      64px 64px,
+      64px 64px;
+  }
+}
+
+@keyframes float {
+  to {
+    transform: translate(6%, 8%) scale(1.08);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(45deg);
+  }
+  to {
+    transform: rotate(405deg);
+  }
+}

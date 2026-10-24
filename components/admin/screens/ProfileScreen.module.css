@@ -1,0 +1,123 @@
+/* Resume PDF picker (matches the field styles in ../fields.module.css). */
+.resumeField {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.resumeLabel {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.resumeUpload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 10px;
+  background: var(--bg-2);
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.resumeUpload:hover {
+  border-color: var(--cyan);
+}
+
+.resumeUpload:focus-visible {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--cyan-soft);
+}
+
+.resumeUploadText {
+  display: grid;
+  gap: 2px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.resumeUploadText strong {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.resumeIcon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--cyan-soft);
+  color: var(--cyan);
+}
+
+.resumeFile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-2);
+}
+
+.resumeInvalid {
+  border-color: var(--danger);
+}
+
+.resumeMeta {
+  display: grid;
+  flex: 1 1 140px;
+  gap: 2px;
+  min-width: 0;
+}
+
+.resumeName {
+  overflow: hidden;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resumeSub {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resumeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+
+.resumeActions > * {
+  flex: 1 1 auto;
+}
+
+.resumeHint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.resumeError {
+  font-size: 0.82rem;
+  color: var(--danger);
+}

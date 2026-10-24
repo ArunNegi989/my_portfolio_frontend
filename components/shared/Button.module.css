@@ -1,0 +1,75 @@
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 24px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    transform 0.3s var(--ease-out),
+    background 0.3s,
+    color 0.3s,
+    border-color 0.3s,
+    box-shadow 0.3s;
+}
+
+.button:active {
+  transform: scale(0.97);
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.icon {
+  display: inline-flex;
+  transition: transform 0.3s var(--ease-out);
+}
+
+.button:hover .icon {
+  transform: translateX(3px);
+}
+
+.primary {
+  background: var(--cyan);
+  color: #021015;
+  box-shadow: 0 0 0 0 var(--cyan-glow);
+}
+
+.primary:hover {
+  box-shadow: 0 10px 40px -8px var(--cyan-glow);
+  transform: translateY(-2px);
+}
+
+.outline {
+  border-color: var(--line-strong);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.outline:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.ghost {
+  padding-inline: 4px;
+  min-height: 40px;
+  color: var(--text-dim);
+}
+
+.ghost:hover {
+  color: var(--cyan);
+}
