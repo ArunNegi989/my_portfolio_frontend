@@ -50,7 +50,7 @@ export default function Overview() {
     <>
       <PageHeader
         title={`Welcome back, ${state.profile.name.split(" ")[0]}`}
-        description="Manage the content of your portfolio. Everything here is a frontend prototype backed by demo data."
+        description="Manage the content of your portfolio. Saved changes appear on the public site straight away."
         actions={
           <>
             <Link href="/admin/blog/new" className={ui.btn}>
@@ -103,7 +103,7 @@ export default function Overview() {
           </ul>
         </Card>
 
-        <Card title="Recent activity" subtitle="Changes made in this browser">
+        <Card title="Recent activity" subtitle="Latest changes made in the dashboard">
           <ol role="list" className={styles.activity}>
             {state.activity.slice(0, 8).map((a) => (
               <li key={a.id}>

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { pageSeo } from "@/data/seo";
-import { settings } from "@/data/settings";
+import { getPageSeo, getSettings } from "@/lib/data";
 import { absoluteUrl } from "@/lib/utils";
 
 interface BuildMetadataInput {
@@ -13,7 +12,8 @@ interface BuildMetadataInput {
   publishedTime?: string;
 }
 
-export function buildMetadata({ title, description, path, image, canonical, type = "website", publishedTime }: BuildMetadataInput): Metadata {
+export async function buildMetadata({ title, description, path, image, canonical, type = "website", publishedTime }: BuildMetadataInput): Promise<Metadata> {
+  const settings = await getSettings();
   const ogImage = image || settings.defaultOgImage;
   const url = canonical || absoluteUrl(settings.siteUrl, path);
   return {
@@ -34,9 +34,9 @@ export function buildMetadata({ title, description, path, image, canonical, type
   };
 }
 
-/** Metadata for a static page, read from data/seo.ts. */
-export function pageMetadata(path: string): Metadata {
-  const entry = pageSeo.find((p) => p.path === path);
+/** Metadata for a static page, from the per-page SEO entries managed in the admin SEO screen. */
+export async function pageMetadata(path: string): Promise<Metadata> {
+  const entry = await getPageSeo(path);
   if (!entry) return {};
   return buildMetadata({
     title: entry.title,

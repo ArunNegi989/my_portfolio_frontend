@@ -3,6 +3,7 @@
 import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { reportSaveError } from "@/lib/admin/errors";
 import { adminActions, newId, useAdminState } from "@/lib/admin/store";
 import { cx } from "@/lib/utils";
 import type { Testimonial } from "@/types/content";
@@ -18,16 +19,21 @@ function TestimonialDialog({ item, isNew, onClose }: { item: Testimonial; isNew:
     register,
     control,
     handleSubmit,
-    formState: { errors },
+    setError,
+    formState: { errors, isSubmitting },
   } = useForm<Testimonial & { confirmReal: boolean }>({ defaultValues: { ...item, confirmReal: !item.isDemo } });
   const isDemo = useWatch({ control, name: "isDemo" });
 
-  const save = handleSubmit(({ confirmReal, ...values }) => {
+  const save = handleSubmit(async ({ confirmReal, ...values }) => {
     void confirmReal;
     const saved: Testimonial = { ...values, id: isNew ? newId("t") : values.id, visible: values.isDemo ? false : values.visible };
-    adminActions.upsert("testimonials", saved, `${isNew ? "Added" : "Updated"} testimonial from ${saved.name}`);
-    toast("Testimonial saved");
-    onClose();
+    try {
+      await adminActions.upsert("testimonials", saved, `${isNew ? "Added" : "Updated"} testimonial from ${saved.name}`);
+      toast("Testimonial saved");
+      onClose();
+    } catch (err) {
+      reportSaveError(err, toast, setError);
+    }
   });
 
   return (
@@ -41,8 +47,8 @@ function TestimonialDialog({ item, isNew, onClose }: { item: Testimonial; isNew:
           <button type="button" className={ui.btn} onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>
-            Save
+          <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>
+            {isSubmitting ? "Saving…" : "Save"}
           </button>
         </>
       }
@@ -83,8 +89,12 @@ export default function TestimonialsScreen() {
   async function remove(item: Testimonial) {
     const ok = await confirm({ title: "Delete testimonial?", message: `The entry from ${item.name} will be removed.`, confirmLabel: "Delete", danger: true });
     if (!ok) return;
-    adminActions.remove("testimonials", item.id, `Deleted testimonial from ${item.name}`);
-    toast("Testimonial deleted");
+    try {
+      await adminActions.remove("testimonials", item.id, `Deleted testimonial from ${item.name}`);
+      toast("Testimonial deleted");
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
   const blank: Testimonial = { id: "new", name: "", role: "", company: "", quote: "", isDemo: true, visible: false };
@@ -100,13 +110,15 @@ export default function TestimonialsScreen() {
           </button>
         }
       />
-      <div className={ui.notice} style={{ marginBottom: 16 }}>
-        <AlertTriangle size={16} aria-hidden="true" />
-        <p>
-          No real testimonials have been supplied yet. The entries below are <strong>demo data</strong> to show how this screen works; they are
-          never rendered on the public site.
-        </p>
-      </div>
+      {testimonials.length > 0 && testimonials.every((t) => t.isDemo) && (
+        <div className={ui.notice} style={{ marginBottom: 16 }}>
+          <AlertTriangle size={16} aria-hidden="true" />
+          <p>
+            No real testimonials have been supplied yet. The entries below are <strong>demo data</strong> to show how this screen works; they are
+            never rendered on the public site.
+          </p>
+        </div>
+      )}
       {testimonials.length === 0 ? (
         <div className={ui.card}>
           <EmptyState title="No testimonials" message="Add one when a client approves a quote." />

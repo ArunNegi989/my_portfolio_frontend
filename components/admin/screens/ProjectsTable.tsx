@@ -4,14 +4,12 @@
 import { Copy, ExternalLink, Globe, Pencil, Plus, Search, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { projects as publicProjects } from "@/data/projects";
+import { reportSaveError } from "@/lib/admin/errors";
 import { adminActions, newId, useAdminState } from "@/lib/admin/store";
 import { cx, displayHost, isWebsiteUrl } from "@/lib/utils";
 import ui from "../admin.module.css";
 import { useFeedback } from "../Feedback";
 import { EmptyState, PageHeader, StatusBadge } from "../ui";
-
-const livePublicSlugs = new Set(publicProjects.filter((p) => p.status === "published").map((p) => p.slug));
 
 export default function ProjectsTable() {
   const { projects } = useAdminState();
@@ -36,26 +34,38 @@ export default function ProjectsTable() {
   }, [projects, query, category, status, featuredOnly]);
 
   async function remove(id: string, title: string) {
-    const ok = await confirm({ title: "Delete project?", message: `“${title}” will be removed from the demo data in this browser.`, confirmLabel: "Delete", danger: true });
+    const ok = await confirm({ title: "Delete project?", message: `“${title}” will be permanently deleted.`, confirmLabel: "Delete", danger: true });
     if (!ok) return;
-    adminActions.remove("projects", id, `Deleted project “${title}”`);
-    toast(`Deleted “${title}”`);
+    try {
+      await adminActions.remove("projects", id, `Deleted project “${title}”`);
+      toast(`Deleted “${title}”`);
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
-  function duplicate(id: string) {
+  async function duplicate(id: string) {
     const source = projects.find((p) => p.id === id);
     if (!source) return;
     let slug = `${source.slug}-copy`;
     let n = 2;
     while (projects.some((p) => p.slug === slug)) slug = `${source.slug}-copy-${n++}`;
-    adminActions.upsert("projects", { ...structuredClone(source), id: newId("p"), slug, title: `${source.title} (copy)`, status: "draft", featured: false, order: projects.length + 1 }, `Duplicated project “${source.title}”`);
-    toast("Project duplicated as a draft");
+    try {
+      await adminActions.upsert("projects", { ...structuredClone(source), id: newId("p"), slug, title: `${source.title} (copy)`, status: "draft", featured: false, order: projects.length + 1 }, `Duplicated project “${source.title}”`);
+      toast("Project duplicated as a draft");
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
-  function toggleFeatured(id: string) {
+  async function toggleFeatured(id: string) {
     const p = projects.find((x) => x.id === id);
     if (!p) return;
-    adminActions.upsert("projects", { ...p, featured: !p.featured }, `${p.featured ? "Unfeatured" : "Featured"} “${p.title}”`);
+    try {
+      await adminActions.upsert("projects", { ...p, featured: !p.featured }, `${p.featured ? "Unfeatured" : "Featured"} “${p.title}”`);
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
   const filtered = query || category !== "all" || status !== "all" || featuredOnly;
@@ -64,7 +74,7 @@ export default function ProjectsTable() {
     <>
       <PageHeader
         title="Projects"
-        description="Create, edit and organise case studies. The public site reads /data/projects.ts; changes here stay in demo storage."
+        description="Create, edit and organise case studies. Published projects appear on the public site; drafts stay here."
         actions={
           <Link href="/admin/projects/new" className={cx(ui.btn, ui.btnPrimary)}>
             <Plus size={15} aria-hidden="true" /> New project
@@ -123,7 +133,7 @@ export default function ProjectsTable() {
             </thead>
             <tbody>
               {rows.map((p) => {
-                const onPublicSite = p.status === "published" && livePublicSlugs.has(p.slug);
+                const onPublicSite = p.status === "published";
                 return (
                   <tr key={p.id}>
                     <td>
@@ -168,7 +178,7 @@ export default function ProjectsTable() {
                             <ExternalLink size={15} aria-hidden="true" />
                           </Link>
                         ) : (
-                          <span className={ui.iconBtn} aria-disabled="true" title="Not on the public site until it is added to /data/projects.ts" style={{ opacity: 0.3 }}>
+                          <span className={ui.iconBtn} aria-disabled="true" title="Drafts aren't shown on the public site" style={{ opacity: 0.3 }}>
                             <ExternalLink size={15} aria-hidden="true" />
                           </span>
                         )}

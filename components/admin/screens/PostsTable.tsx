@@ -4,14 +4,12 @@
 import { ExternalLink, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { posts as publicPosts } from "@/data/blog";
+import { reportSaveError } from "@/lib/admin/errors";
 import { adminActions, useAdminState } from "@/lib/admin/store";
 import { cx, formatDate, readingTime } from "@/lib/utils";
 import ui from "../admin.module.css";
 import { useFeedback } from "../Feedback";
 import { EmptyState, PageHeader, StatusBadge } from "../ui";
-
-const livePublicSlugs = new Set(publicPosts.filter((p) => p.status === "published").map((p) => p.slug));
 
 export default function PostsTable() {
   const { posts } = useAdminState();
@@ -29,10 +27,14 @@ export default function PostsTable() {
   }, [posts, query, category, status]);
 
   async function remove(id: string, title: string) {
-    const ok = await confirm({ title: "Delete article?", message: `“${title}” will be removed from the demo data in this browser.`, confirmLabel: "Delete", danger: true });
+    const ok = await confirm({ title: "Delete article?", message: `“${title}” will be permanently deleted.`, confirmLabel: "Delete", danger: true });
     if (!ok) return;
-    adminActions.remove("posts", id, `Deleted article “${title}”`);
-    toast(`Deleted “${title}”`);
+    try {
+      await adminActions.remove("posts", id, `Deleted article “${title}”`);
+      toast(`Deleted “${title}”`);
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
   const filtered = query || category !== "all" || status !== "all";
@@ -41,7 +43,7 @@ export default function PostsTable() {
     <>
       <PageHeader
         title="Blog"
-        description="Write and manage articles. The public blog reads /data/blog.ts; edits here stay in demo storage."
+        description="Write and manage articles. Published articles appear on the public blog; drafts stay here."
         actions={
           <Link href="/admin/blog/new" className={cx(ui.btn, ui.btnPrimary)}>
             <Plus size={15} aria-hidden="true" /> New article
@@ -94,7 +96,7 @@ export default function PostsTable() {
             </thead>
             <tbody>
               {rows.map((p) => {
-                const isLive = p.status === "published" && livePublicSlugs.has(p.slug);
+                const isLive = p.status === "published";
                 return (
                   <tr key={p.id}>
                     <td>
@@ -120,7 +122,7 @@ export default function PostsTable() {
                             <ExternalLink size={15} aria-hidden="true" />
                           </Link>
                         ) : (
-                          <span className={ui.iconBtn} aria-disabled="true" title="Not on the public site until it is added to /data/blog.ts" style={{ opacity: 0.3 }}>
+                          <span className={ui.iconBtn} aria-disabled="true" title="Drafts aren't shown on the public site" style={{ opacity: 0.3 }}>
                             <ExternalLink size={15} aria-hidden="true" />
                           </span>
                         )}

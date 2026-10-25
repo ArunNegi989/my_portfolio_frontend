@@ -1,4 +1,4 @@
-import { TriangleAlert } from "lucide-react";
+import { Info } from "lucide-react";
 import type { ReactNode } from "react";
 import { cx } from "@/lib/utils";
 import styles from "./Auth.module.css";
@@ -8,14 +8,14 @@ interface AuthCardProps {
   eyebrow: string;
   title: string;
   description: string;
-  /** Plain-language note that this page is a frontend preview, shown above the form. */
-  demoNote: string;
+  /** Optional plain-language note shown above the form (e.g. how new accounts get access). */
+  note?: string;
   footer?: ReactNode;
   wide?: boolean;
   children: ReactNode;
 }
 
-export default function AuthCard({ icon, eyebrow, title, description, demoNote, footer, wide, children }: AuthCardProps) {
+export default function AuthCard({ icon, eyebrow, title, description, note, footer, wide, children }: AuthCardProps) {
   return (
     <section className={cx(styles.card, wide && styles.wide)} aria-labelledby="auth-title">
       <header className={styles.head}>
@@ -28,12 +28,12 @@ export default function AuthCard({ icon, eyebrow, title, description, demoNote, 
         </h1>
         <p className={styles.description}>{description}</p>
       </header>
-      <p className={styles.demo}>
-        <TriangleAlert size={16} aria-hidden="true" />
-        <span>
-          <strong>Preview only.</strong> {demoNote}
-        </span>
-      </p>
+      {note && (
+        <p className={styles.note}>
+          <Info size={16} aria-hidden="true" />
+          <span>{note}</span>
+        </p>
+      )}
       {children}
       {footer && <p className={styles.footer}>{footer}</p>}
     </section>

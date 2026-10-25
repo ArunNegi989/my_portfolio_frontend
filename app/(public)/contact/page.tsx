@@ -3,7 +3,9 @@ import { getHomeContent, getProfile, getServices, getSettings, getSocialLinks } 
 import { pageMetadata } from "@/lib/seo";
 import styles from "./contact.module.css";
 
-export const metadata = pageMetadata("/contact");
+export function generateMetadata() {
+  return pageMetadata("/contact");
+}
 
 export default async function ContactPage() {
   const [profile, settings, socialLinks, home, services] = await Promise.all([

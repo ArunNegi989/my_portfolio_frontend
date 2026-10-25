@@ -3,6 +3,7 @@
 import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from "lucide-react";
 import { useFieldArray, useForm, Controller, useWatch } from "react-hook-form";
 import { SocialIcon } from "@/components/shared/BrandIcons";
+import { reportSaveError } from "@/lib/admin/errors";
 import { adminActions, newId, useAdminState, useHydrated } from "@/lib/admin/store";
 import { cx } from "@/lib/utils";
 import { validateUrl } from "@/lib/validation";
@@ -23,14 +24,19 @@ const PLATFORMS: Array<{ value: SocialPlatform; label: string }> = [
 
 function SocialForm({ initial }: { initial: SocialLink[] }) {
   const { toast } = useFeedback();
-  const { register, control, handleSubmit, reset, formState: { errors, isDirty } } = useForm<{ links: SocialLink[] }>({ defaultValues: { links: initial } });
+  const { register, control, handleSubmit, reset, setError, formState: { errors, isDirty, isSubmitting } } = useForm<{ links: SocialLink[] }>({ defaultValues: { links: initial } });
   const links = useFieldArray({ control, name: "links" });
   const values = useWatch({ control, name: "links" });
 
-  const onSubmit = handleSubmit(({ links: next }) => {
-    adminActions.replace("socialLinks", next, "Updated social links");
-    reset({ links: next });
-    toast("Social links saved");
+  const onSubmit = handleSubmit(async ({ links: next }) => {
+    try {
+      await adminActions.replace("socialLinks", next, "Updated social links");
+      reset({ links: next });
+      toast("Social links saved");
+    } catch (err) {
+      // The API names list fields "items.<i>.<field>"; this form calls the list "links".
+      reportSaveError(err, toast, setError, (field) => field.replace(/^items\./, "links."));
+    }
   });
 
   return (
@@ -39,8 +45,8 @@ function SocialForm({ initial }: { initial: SocialLink[] }) {
         title="Social links"
         description={isDirty ? "You have unsaved changes." : "Links shown in the footer, contact section and contact page."}
         actions={
-          <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>
-            <Save size={15} aria-hidden="true" /> Save links
+          <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>
+            <Save size={15} aria-hidden="true" /> {isSubmitting ? "Saving…" : "Save links"}
           </button>
         }
       />

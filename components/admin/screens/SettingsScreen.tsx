@@ -2,7 +2,8 @@
 
 import { Download, RotateCcw, Save } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
-import { adminActions, useAdminState, useHydrated } from "@/lib/admin/store";
+import { reportSaveError } from "@/lib/admin/errors";
+import { adminActions, adminStore, useAdminState, useHydrated } from "@/lib/admin/store";
 import { cx } from "@/lib/utils";
 import type { SiteSettings } from "@/types/content";
 import ui from "../admin.module.css";
@@ -19,12 +20,16 @@ const PAGE_IMAGE_LABELS: Record<keyof SiteSettings["pageImages"], string> = {
 
 function SettingsForm({ initial }: { initial: SiteSettings }) {
   const { toast, confirm } = useFeedback();
-  const { register, control, handleSubmit, reset, formState: { errors, isDirty } } = useForm<SiteSettings>({ defaultValues: initial });
+  const { register, control, handleSubmit, reset, setError, formState: { errors, isDirty, isSubmitting } } = useForm<SiteSettings>({ defaultValues: initial });
 
-  const onSubmit = handleSubmit((values) => {
-    adminActions.update("settings", values, "Updated site settings");
-    reset(values);
-    toast("Settings saved");
+  const onSubmit = handleSubmit(async (values) => {
+    try {
+      await adminActions.update("settings", values, "Updated site settings");
+      reset(values);
+      toast("Settings saved");
+    } catch (err) {
+      reportSaveError(err, toast, setError);
+    }
   });
 
   function exportJson() {
@@ -38,17 +43,20 @@ function SettingsForm({ initial }: { initial: SiteSettings }) {
     toast("Content exported as JSON");
   }
 
-  async function resetDemo() {
-    const ok = await confirm({
-      title: "Reset all demo data?",
-      message: "Every change made in this browser will be discarded and the content reloaded from the /data files.",
-      confirmLabel: "Reset demo data",
-      danger: true,
-    });
-    if (!ok) return;
-    adminActions.reset();
-    toast("Demo data reset", "info");
-    window.location.reload();
+  async function reloadFromServer() {
+    if (isDirty) {
+      const ok = await confirm({
+        title: "Discard unsaved changes?",
+        message: "Reloading fetches the latest saved content from the server. Unsaved edits on this screen will be lost.",
+        confirmLabel: "Reload",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    await adminActions.reload();
+    const fresh = adminStore.getSnapshot().state?.settings;
+    if (fresh) reset(fresh);
+    toast("Content reloaded from the server", "info");
   }
 
   return (
@@ -57,8 +65,8 @@ function SettingsForm({ initial }: { initial: SiteSettings }) {
         title="General settings"
         description={isDirty ? "You have unsaved changes." : "Site-wide options and data tools."}
         actions={
-          <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>
-            <Save size={15} aria-hidden="true" /> Save settings
+          <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>
+            <Save size={15} aria-hidden="true" /> {isSubmitting ? "Saving…" : "Save settings"}
           </button>
         }
       />
@@ -113,16 +121,16 @@ function SettingsForm({ initial }: { initial: SiteSettings }) {
             />
             <Controller control={control} name="smoothScroll" render={({ field }) => <Toggle label="Smooth scrolling" description="Lenis on desktop pointers; off for reduced motion" checked={field.value} onChange={field.onChange} />} />
           </Card>
-          <Card title="Data tools" subtitle="Demo storage lives in this browser only.">
+          <Card title="Data tools" subtitle="Content is stored in the database.">
             <div className={ui.stack}>
               <button type="button" className={ui.btn} onClick={exportJson}>
                 <Download size={15} aria-hidden="true" /> Export content as JSON
               </button>
               <p className={ui.muted} style={{ fontSize: "0.8rem" }}>
-                Use the export to copy edits into the /data files, or as seed data for a future backend.
+                A snapshot of everything in the dashboard, useful as a manual backup.
               </p>
-              <button type="button" className={cx(ui.btn, ui.btnDanger)} onClick={resetDemo}>
-                <RotateCcw size={15} aria-hidden="true" /> Reset demo data
+              <button type="button" className={ui.btn} onClick={reloadFromServer}>
+                <RotateCcw size={15} aria-hidden="true" /> Reload from server
               </button>
             </div>
           </Card>

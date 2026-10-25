@@ -8,7 +8,9 @@ import { getServices } from "@/lib/data";
 import { pageMetadata } from "@/lib/seo";
 import styles from "./services.module.css";
 
-export const metadata = pageMetadata("/services");
+export function generateMetadata() {
+  return pageMetadata("/services");
+}
 
 export default async function ServicesPage() {
   const services = await getServices();

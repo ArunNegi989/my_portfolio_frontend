@@ -23,6 +23,11 @@ export interface ForgotPasswordValues {
   email: string;
 }
 
+export interface ResetPasswordValues {
+  password: string;
+  confirmPassword: string;
+}
+
 export const PASSWORD_RULES = [
   { id: "length", label: "At least 8 characters", test: (value: string) => value.length >= 8 },
   { id: "letter", label: "One letter", test: (value: string) => /[a-z]/i.test(value) },
@@ -42,23 +47,33 @@ export function validateLogin(values: LoginValues): FieldErrors<LoginValues> {
   };
 }
 
-export function validateSignup(values: SignupValues): FieldErrors<SignupValues> {
-  const name = values.name.trim();
+/** Same limit the server enforces: bcrypt only uses the first 72 bytes of a password. */
+const MAX_PASSWORD_BYTES = 72;
+
+function newPasswordErrors(values: { password: string; confirmPassword: string }) {
   let password: string | undefined;
   if (!values.password) password = "Create a password.";
   else if (!PASSWORD_RULES.every((rule) => rule.test(values.password))) password = "Use at least 8 characters, including a letter and a number.";
+  else if (new TextEncoder().encode(values.password).length > MAX_PASSWORD_BYTES) password = "Use 72 characters or fewer.";
 
   let confirmPassword: string | undefined;
   if (!values.confirmPassword) confirmPassword = "Confirm your password.";
   else if (values.confirmPassword !== values.password) confirmPassword = "Passwords don't match.";
+  return { password, confirmPassword };
+}
 
+export function validateSignup(values: SignupValues): FieldErrors<SignupValues> {
+  const name = values.name.trim();
   return {
     name: !name ? "Enter your full name." : name.length < 2 ? "Name must be at least 2 characters." : undefined,
     email: emailError(values.email),
-    password,
-    confirmPassword,
+    ...newPasswordErrors(values),
     acceptTerms: values.acceptTerms ? undefined : "Accept the terms and conditions to continue.",
   };
+}
+
+export function validateResetPassword(values: ResetPasswordValues): FieldErrors<ResetPasswordValues> {
+  return newPasswordErrors(values);
 }
 
 export function validateForgotPassword(values: ForgotPasswordValues): FieldErrors<ForgotPasswordValues> {

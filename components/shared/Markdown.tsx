@@ -3,6 +3,9 @@ import { parseInline, type MdBlock } from "@/lib/markdown";
 import CodeBlock from "./CodeBlock";
 import styles from "./Markdown.module.css";
 
+/** Article content is edited in the dashboard: only plain web, mail, site and anchor links become links. */
+const SAFE_HREF = /^(https?:\/\/|mailto:|\/(?!\/)|#)/i;
+
 function Inline({ text }: { text: string }) {
   return (
     <>
@@ -15,6 +18,7 @@ function Inline({ text }: { text: string }) {
           case "em":
             return <em key={index}>{token.value}</em>;
           case "link": {
+            if (!SAFE_HREF.test(token.href)) return <Fragment key={index}>{token.value}</Fragment>;
             const external = /^https?:/.test(token.href);
             return (
               <a key={index} href={token.href} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}>

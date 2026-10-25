@@ -13,8 +13,7 @@ export default function ForgotPasswordPage() {
       icon={<KeyRound size={22} />}
       eyebrow="Account recovery"
       title="Reset password"
-      description="Enter the email address linked to your account."
-      demoNote="Password recovery will be available after backend integration. No email will be sent."
+      description="Enter the email address linked to your account. We'll send a single-use link to set a new password."
       footer={
         <Link href="/login" className={styles.link}>
           <ArrowLeft size={16} aria-hidden="true" /> Back to login

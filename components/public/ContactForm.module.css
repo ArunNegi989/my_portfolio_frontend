@@ -1,4 +1,5 @@
 .form {
+  position: relative;
   display: grid;
   gap: 18px;
   padding: clamp(22px, 3vw, 36px);
@@ -8,13 +9,25 @@
   backdrop-filter: blur(10px);
 }
 
-.demoNote {
-  padding: 10px 14px;
-  border: 1px dashed rgba(255, 200, 92, 0.4);
-  border-radius: var(--radius-sm);
-  font-size: 0.82rem;
-  color: var(--warning);
-  background: rgba(255, 200, 92, 0.05);
+/* Spam trap: kept off-screen and out of the accessibility tree. */
+.honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.sendError {
+  display: grid;
+  gap: 8px;
+}
+
+.sendError a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: underline;
 }
 
 .row {

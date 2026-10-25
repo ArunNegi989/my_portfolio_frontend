@@ -1,7 +1,6 @@
 // Browser-side intro state, shared by the intro overlay and the "Replay Intro" button.
-// Deliberately not a "use client" module: the root layout imports the boot script string.
+// Deliberately not a "use client" module: the root layout imports the boot script builder.
 
-import { settings } from "@/data/settings";
 import { unlockScroll } from "@/lib/utils/scroll";
 
 const STORAGE_KEY = "an-portfolio-intro-seen";
@@ -16,10 +15,17 @@ export interface IntroState {
  * Runs before first paint. Sets html[data-intro] so returning visitors never see the overlay
  * flash and first-time visitors never see the homepage flash before the intro starts.
  * Without JavaScript the attribute is absent and CSS hides the overlay entirely.
+ * `enabled` is the admin "Cinematic intro" setting; it is also recorded on <html> for the store.
  */
-export const INTRO_BOOT_SCRIPT = `(function(){var d=document.documentElement;var s=false;try{s=localStorage.getItem(${JSON.stringify(
-  STORAGE_KEY,
-)})==="1"}catch(e){}d.dataset.intro=(${settings.introEnabled}&&!s)?"playing":"done";})();`;
+export function introBootScript(enabled: boolean) {
+  return `(function(){var d=document.documentElement;var s=false;try{s=localStorage.getItem(${JSON.stringify(
+    STORAGE_KEY,
+  )})==="1"}catch(e){}d.dataset.introEnabled=${JSON.stringify(String(enabled))};d.dataset.intro=(${enabled}&&!s)?"playing":"done";})();`;
+}
+
+function introEnabled(): boolean {
+  return document.documentElement.dataset.introEnabled !== "false";
+}
 
 const SERVER_STATE: IntroState = { status: "playing", run: 0 };
 let state: IntroState | null = null;
@@ -34,7 +40,7 @@ function readSeen(): boolean {
 }
 
 function current(): IntroState {
-  if (!state) state = { status: settings.introEnabled && !readSeen() ? "playing" : "done", run: 0 };
+  if (!state) state = { status: introEnabled() && !readSeen() ? "playing" : "done", run: 0 };
   return state;
 }
 

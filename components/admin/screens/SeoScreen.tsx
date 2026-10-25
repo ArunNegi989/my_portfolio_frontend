@@ -3,7 +3,8 @@
 import { CheckCircle2, Info, Save, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { Controller, useForm, useWatch } from "react-hook-form";
-import { validateImageSrc } from "@/lib/admin/localImages";
+import { reportSaveError } from "@/lib/admin/errors";
+import { validateImageSrc } from "@/lib/admin/media";
 import { adminActions, useAdminState, useHydrated } from "@/lib/admin/store";
 import { cx } from "@/lib/utils";
 import { validateUrl } from "@/lib/validation";
@@ -16,14 +17,19 @@ import { Card, LoadingRows, PageHeader } from "../ui";
 function SeoForm({ initial }: { initial: PageSeo[] }) {
   const { projects, posts, settings } = useAdminState();
   const { toast } = useFeedback();
-  const { register, control, handleSubmit, reset, formState: { errors, isDirty } } = useForm<{ pages: PageSeo[] }>({ defaultValues: { pages: initial } });
+  const { register, control, handleSubmit, reset, setError, formState: { errors, isDirty, isSubmitting } } = useForm<{ pages: PageSeo[] }>({ defaultValues: { pages: initial } });
   const pages = useWatch({ control, name: "pages" });
 
-  const onSubmit = handleSubmit(({ pages: next }) => {
+  const onSubmit = handleSubmit(async ({ pages: next }) => {
     const cleaned = next.map((p) => ({ ...p, canonical: p.canonical?.trim() || undefined, ogImage: p.ogImage?.trim() || undefined }));
-    adminActions.replace("seo", cleaned, "Updated SEO settings");
-    reset({ pages: cleaned });
-    toast("SEO settings saved");
+    try {
+      await adminActions.replace("seo", cleaned, "Updated SEO settings");
+      reset({ pages: cleaned });
+      toast("SEO settings saved");
+    } catch (err) {
+      // The API names list fields "items.<i>.<field>"; this form calls the list "pages".
+      reportSaveError(err, toast, setError, (field) => field.replace(/^items\./, "pages."));
+    }
   });
 
   const missingProjects = projects.filter((p) => p.status === "published" && (!p.seoDescription || !p.seoTitle)).length;
@@ -35,8 +41,8 @@ function SeoForm({ initial }: { initial: PageSeo[] }) {
         title="SEO"
         description={isDirty ? "You have unsaved changes." : "Titles, descriptions, canonical URLs and social sharing images for each static page."}
         actions={
-          <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>
-            <Save size={15} aria-hidden="true" /> Save SEO
+          <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>
+            <Save size={15} aria-hidden="true" /> {isSubmitting ? "Saving…" : "Save SEO"}
           </button>
         }
       />

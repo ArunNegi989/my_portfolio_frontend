@@ -10,14 +10,16 @@ import { GithubIcon } from "@/components/shared/BrandIcons";
 import ButtonLink from "@/components/shared/ButtonLink";
 import SmartImage from "@/components/shared/SmartImage";
 import TagList from "@/components/shared/TagList";
-import { projects as allProjectData } from "@/data/projects";
 import { getProjectBySlug, getProjects } from "@/lib/data";
 import { buildMetadata } from "@/lib/seo";
 import { cx } from "@/lib/utils";
 import styles from "./project.module.css";
 
+// Projects added later are rendered on their first visit. Cache Components needs at least one
+// param at build time, so an empty list yields a placeholder that resolves to notFound().
 export async function generateStaticParams() {
-  return allProjectData.filter((p) => p.status === "published").map((p) => ({ slug: p.slug }));
+  const projects = await getProjects();
+  return projects.length ? projects.map((p) => ({ slug: p.slug })) : [{ slug: "__placeholder__" }];
 }
 
 export async function generateMetadata({ params }: PageProps<"/projects/[slug]">) {

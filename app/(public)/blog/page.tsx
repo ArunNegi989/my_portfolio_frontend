@@ -6,7 +6,9 @@ import { getPosts, getSettings } from "@/lib/data";
 import { pageMetadata } from "@/lib/seo";
 import styles from "../inner.module.css";
 
-export const metadata = pageMetadata("/blog");
+export function generateMetadata() {
+  return pageMetadata("/blog");
+}
 
 export default async function BlogPage() {
   const [posts, settings] = await Promise.all([getPosts(), getSettings()]);

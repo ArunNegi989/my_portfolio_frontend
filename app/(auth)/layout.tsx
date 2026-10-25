@@ -1,17 +1,18 @@
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { profile } from "@/data/profile";
+import { getProfile } from "@/lib/data";
 import { cx } from "@/lib/utils";
 import styles from "./auth.module.css";
 
-// Frontend-only auth screens (Phase 1). They sit outside the public layout, are reachable only by URL,
-// and are kept out of search results. Nothing here authenticates anyone.
+// Sign-in, sign-up and password screens for the dashboard. They sit outside the public layout,
+// are reachable only by URL and are kept out of search results.
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function AuthLayout({ children }: LayoutProps<"/">) {
+export default async function AuthLayout({ children }: LayoutProps<"/">) {
+  const profile = await getProfile();
   return (
     <div className={styles.shell}>
       <div className={styles.backdrop} aria-hidden="true">
@@ -37,7 +38,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
         {children}
       </main>
 
-      <p className={styles.footnote}>Frontend preview · Authentication is not connected yet</p>
+      <p className={styles.footnote}>Portfolio dashboard · Administrator access only</p>
     </div>
   );
 }

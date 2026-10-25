@@ -6,7 +6,9 @@ import { getSettings, getSkills } from "@/lib/data";
 import { pageMetadata } from "@/lib/seo";
 import styles from "../inner.module.css";
 
-export const metadata = pageMetadata("/skills");
+export function generateMetadata() {
+  return pageMetadata("/skills");
+}
 
 export default async function SkillsPage() {
   const [{ categories, skills }, settings] = await Promise.all([getSkills(), getSettings()]);

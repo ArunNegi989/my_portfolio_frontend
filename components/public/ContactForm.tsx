@@ -1,8 +1,9 @@
 "use client";
 
-import { CheckCircle2, Loader2, Mail, Send } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Mail, Send } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { api, ApiError, errorMessage } from "@/lib/api/client";
 import { emailPattern } from "@/lib/validation";
 import buttonStyles from "@/components/shared/Button.module.css";
 import styles from "./ContactForm.module.css";
@@ -12,6 +13,8 @@ interface ContactValues {
   email: string;
   projectType: string;
   message: string;
+  /** Honeypot: hidden from people, filled in by bots. */
+  website: string;
 }
 
 interface ContactFormProps {
@@ -19,41 +22,48 @@ interface ContactFormProps {
   projectTypes: string[];
 }
 
-/**
- * Validated contact form. There is no backend yet, so submitting is a DEMO:
- * nothing is sent; the visitor is offered a pre-filled email instead.
- */
+function mailtoHref(to: string, values: ContactValues) {
+  const subject = encodeURIComponent(`Project inquiry${values.projectType ? ` — ${values.projectType}` : ""}`);
+  const body = encodeURIComponent(`Hi Arun,\n\n${values.message}\n\n— ${values.name} (${values.email})`);
+  return `mailto:${to}?subject=${subject}&body=${body}`;
+}
+
+/** Validated contact form. Messages are stored by the backend and forwarded to the site owner by email. */
 export default function ContactForm({ email, projectTypes }: ContactFormProps) {
-  const [submitted, setSubmitted] = useState<ContactValues | null>(null);
+  const [sentName, setSentName] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ message: string; values: ContactValues } | null>(null);
   const {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isSubmitting },
-  } = useForm<ContactValues>({ defaultValues: { name: "", email: "", projectType: "", message: "" }, mode: "onBlur" });
+  } = useForm<ContactValues>({ defaultValues: { name: "", email: "", projectType: "", message: "", website: "" }, mode: "onBlur" });
 
   async function onSubmit(values: ContactValues) {
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    setSubmitted(values);
-    reset();
+    setFailure(null);
+    try {
+      await api.post("/contact", values, { auth: false });
+      setSentName(values.name);
+      reset();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 400) {
+        for (const issue of err.details) {
+          if (issue.field === "name" || issue.field === "email" || issue.field === "message") setError(issue.field, { type: "server", message: issue.message });
+        }
+      }
+      setFailure({ message: errorMessage(err, "Your message couldn't be sent. Please try again."), values });
+    }
   }
 
-  if (submitted) {
-    const subject = encodeURIComponent(`Project inquiry${submitted.projectType ? ` — ${submitted.projectType}` : ""}`);
-    const body = encodeURIComponent(`Hi Arun,\n\n${submitted.message}\n\n— ${submitted.name} (${submitted.email})`);
+  if (sentName !== null) {
     return (
       <div className={styles.success} role="status">
         <CheckCircle2 size={32} aria-hidden="true" />
-        <h3>Thanks, {submitted.name.split(" ")[0]}!</h3>
-        <p>
-          <strong>Demo mode:</strong> this form is not connected to an email service yet, so your message was <em>not</em> sent.
-          Use the button below to send it from your email app.
-        </p>
+        <h3>Thanks, {sentName.split(" ")[0]}!</h3>
+        <p>Your message has been sent. I&apos;ll get back to you soon, usually within a couple of days.</p>
         <div className={styles.successActions}>
-          <a href={`mailto:${email}?subject=${subject}&body=${body}`} className={`${buttonStyles.button} ${buttonStyles.primary}`}>
-            <Mail size={16} aria-hidden="true" /> Send via email app
-          </a>
-          <button type="button" className={`${buttonStyles.button} ${buttonStyles.outline}`} onClick={() => setSubmitted(null)}>
+          <button type="button" className={`${buttonStyles.button} ${buttonStyles.outline}`} onClick={() => setSentName(null)}>
             Write another
           </button>
         </div>
@@ -63,7 +73,6 @@ export default function ContactForm({ email, projectTypes }: ContactFormProps) {
 
   return (
     <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
-      <p className={styles.demoNote}>Demo form — submissions are not sent until an email service is connected.</p>
       <div className={styles.row}>
         <div className={styles.field}>
           <label htmlFor="contact-name">Name</label>
@@ -123,6 +132,7 @@ export default function ContactForm({ email, projectTypes }: ContactFormProps) {
           {...register("message", {
             required: "Please tell me a little about your idea.",
             minLength: { value: 20, message: "Please write at least 20 characters." },
+            maxLength: { value: 5000, message: "Please keep your message under 5000 characters." },
           })}
         />
         {errors.message && (
@@ -131,6 +141,22 @@ export default function ContactForm({ email, projectTypes }: ContactFormProps) {
           </p>
         )}
       </div>
+      {/* Honeypot: off-screen and hidden from assistive tech; real visitors never fill it in. */}
+      <div aria-hidden="true" className={styles.honeypot}>
+        <label htmlFor="contact-website">Website</label>
+        <input id="contact-website" tabIndex={-1} autoComplete="off" {...register("website")} />
+      </div>
+      {failure && (
+        <div className={`${styles.error} ${styles.sendError}`} role="alert">
+          <span>
+            <AlertCircle size={16} aria-hidden="true" style={{ verticalAlign: "-3px", marginRight: 6 }} />
+            {failure.message}
+          </span>
+          <a href={mailtoHref(email, failure.values)}>
+            <Mail size={15} aria-hidden="true" /> Send it from your email app instead
+          </a>
+        </div>
+      )}
       <button type="submit" className={`${buttonStyles.button} ${buttonStyles.primary} ${styles.submit}`} disabled={isSubmitting}>
         {isSubmitting ? <Loader2 size={16} className={styles.spin} aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
         {isSubmitting ? "Sending…" : "Send message"}

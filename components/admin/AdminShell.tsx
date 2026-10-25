@@ -9,27 +9,33 @@ import {
   ExternalLink,
   FileText,
   FolderKanban,
+  Inbox,
   LayoutDashboard,
   LayoutTemplate,
   Link2,
+  Loader2,
   LogOut,
   Menu,
   MessageSquareQuote,
   PanelLeftClose,
   PanelLeftOpen,
+  RefreshCw,
   Search,
   Settings,
-  ShieldAlert,
+  ShieldCheck,
   Sparkles,
   User,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useAdminState } from "@/lib/admin/store";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { invalidateSession, sessionStore } from "@/lib/api/client";
+import { getSession, signOut } from "@/lib/auth";
+import { clearAdminState, loadAdminContent, useAdminState, useAdminStatus } from "@/lib/admin/store";
 import { cx } from "@/lib/utils";
 import { FeedbackProvider } from "./Feedback";
+import ui from "./admin.module.css";
 import styles from "./AdminShell.module.css";
 
 interface NavEntry {
@@ -52,6 +58,7 @@ const NAV: Array<{ group: string; items: NavEntry[] }> = [
       { label: "Services", href: "/admin/services", icon: <Sparkles size={18} /> },
       { label: "Education", href: "/admin/education", icon: <Award size={18} /> },
       { label: "Testimonials", href: "/admin/testimonials", icon: <MessageSquareQuote size={18} /> },
+      { label: "Messages", href: "/admin/messages", icon: <Inbox size={18} /> },
     ],
   },
   {
@@ -162,8 +169,31 @@ function GlobalSearch() {
   );
 }
 
+function useSession() {
+  return useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot, sessionStore.getServerSnapshot);
+}
+
+/** Ends the session on the server, wipes loaded content and goes to the login page. */
+function useSignOut() {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  async function run() {
+    setBusy(true);
+    try {
+      await signOut();
+    } catch {
+      // Even if the request failed (offline), forget everything locally; cookies expire on their own.
+    } finally {
+      clearAdminState();
+      router.replace("/login");
+    }
+  }
+  return { busy, run };
+}
+
 function ProfileMenu() {
-  const state = useAdminState();
+  const { user } = useSession();
+  const signOutAction = useSignOut();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -182,17 +212,25 @@ function ProfileMenu() {
   // Transient menu: close it if Activity hides this route.
   useLayoutEffect(() => () => setOpen(false), []);
 
+  const name = user?.name || user?.email || "Admin";
+  const initials = name
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
+
   return (
     <div className={styles.profile} ref={ref}>
       <button type="button" className={styles.avatarBtn} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <span className={styles.avatar}>AN</span>
-        <span className={styles.avatarName}>{state.profile.name}</span>
+        <span className={styles.avatar}>{initials || "AN"}</span>
+        <span className={styles.avatarName}>{name}</span>
       </button>
       {open && (
         <div className={styles.menu} role="menu">
           <div className={styles.menuHeader}>
-            <strong>{state.profile.name}</strong>
-            <span>Profile menu mockup</span>
+            <strong>{name}</strong>
+            <span>{user?.email}</span>
           </div>
           <Link href="/admin/profile" role="menuitem" onClick={() => setOpen(false)}>
             <User size={15} aria-hidden="true" /> Edit profile
@@ -203,8 +241,8 @@ function ProfileMenu() {
           <Link href="/" role="menuitem" target="_blank">
             <ExternalLink size={15} aria-hidden="true" /> View public site
           </Link>
-          <button type="button" role="menuitem" disabled title="Authentication is planned for Phase 2">
-            <LogOut size={15} aria-hidden="true" /> Sign out (Phase 2)
+          <button type="button" role="menuitem" onClick={signOutAction.run} disabled={signOutAction.busy}>
+            <LogOut size={15} aria-hidden="true" /> {signOutAction.busy ? "Signing out…" : "Sign out"}
           </button>
         </div>
       )}
@@ -212,105 +250,231 @@ function ProfileMenu() {
   );
 }
 
-export default function AdminShell({ children }: { children: ReactNode }) {
+function GateScreen({ title, children, busy }: { title: string; children?: ReactNode; busy?: boolean }) {
+  return (
+    <div className={styles.gate}>
+      <div className={styles.gateCard} role={busy ? "status" : "alert"} aria-busy={busy || undefined}>
+        {busy && <Loader2 size={26} className={styles.gateSpinner} aria-hidden="true" />}
+        <h1>{title}</h1>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Renders the dashboard only for a confirmed admin session. Every admin API checks the session and
+ * role on the server as well; this guard just avoids showing UI to people who can't use it.
+ */
+function AdminGate({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const session = useSession();
+  const content = useAdminStatus();
+  const signOutAction = useSignOut();
+  const [sessionError, setSessionError] = useState<string | null>(null);
+
+  // Ask the server who is signed in (refreshing the session if the access token expired).
+  useEffect(() => {
+    if (session.checked) return;
+    let cancelled = false;
+    getSession()
+      .then(() => !cancelled && setSessionError(null))
+      .catch((err) => !cancelled && setSessionError(err instanceof Error ? err.message : "Couldn't reach the server."));
+    return () => {
+      cancelled = true;
+    };
+  }, [session.checked]);
+
+  const isAdmin = session.user?.role === "admin";
+
+  useEffect(() => {
+    if (session.checked && !session.user) {
+      clearAdminState();
+      router.replace(`/login?next=${encodeURIComponent(window.location.pathname)}`);
+    }
+  }, [session.checked, session.user, router]);
+
+  useEffect(() => {
+    if (isAdmin && content.status === "idle") void loadAdminContent();
+  }, [isAdmin, content.status]);
+
+  // A page restored from the back/forward cache must not show stale protected content: re-check.
+  useEffect(() => {
+    const onShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        clearAdminState();
+        invalidateSession();
+      }
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
+
+  if (sessionError && !session.checked) {
+    return (
+      <GateScreen title="Can't reach the server">
+        <p>{sessionError}</p>
+        <div className={styles.gateActions}>
+          <button type="button" className={cx(ui.btn, ui.btnPrimary)} onClick={() => window.location.reload()}>
+            <RefreshCw size={15} aria-hidden="true" /> Try again
+          </button>
+        </div>
+      </GateScreen>
+    );
+  }
+  if (!session.checked) return <GateScreen title="Checking your session…" busy />;
+  if (!session.user) return <GateScreen title="Redirecting to sign in…" busy />;
+  if (!isAdmin) {
+    return (
+      <GateScreen title="No dashboard access">
+        <p>
+          You&apos;re signed in as <strong>{session.user.email}</strong>, but this account hasn&apos;t been given access to the dashboard. Ask the site
+          administrator to grant it.
+        </p>
+        <div className={styles.gateActions}>
+          <Link href="/" className={ui.btn}>
+            Back to the site
+          </Link>
+          <button type="button" className={cx(ui.btn, ui.btnPrimary)} onClick={signOutAction.run} disabled={signOutAction.busy}>
+            <LogOut size={15} aria-hidden="true" /> Sign out
+          </button>
+        </div>
+      </GateScreen>
+    );
+  }
+  if (content.status === "empty") {
+    return (
+      <GateScreen title="No content yet">
+        <p>
+          The database is empty. Import the site&apos;s existing content by running <code>npm run seed</code> in <code>my-portfolio-backend</code>, then reload.
+        </p>
+        <div className={styles.gateActions}>
+          <button type="button" className={cx(ui.btn, ui.btnPrimary)} onClick={() => void loadAdminContent()}>
+            <RefreshCw size={15} aria-hidden="true" /> Reload
+          </button>
+        </div>
+      </GateScreen>
+    );
+  }
+  if (content.status === "error") {
+    return (
+      <GateScreen title="Couldn't load the dashboard">
+        <p>{content.error}</p>
+        <div className={styles.gateActions}>
+          <button type="button" className={cx(ui.btn, ui.btnPrimary)} onClick={() => void loadAdminContent()}>
+            <RefreshCw size={15} aria-hidden="true" /> Try again
+          </button>
+        </div>
+      </GateScreen>
+    );
+  }
+  if (content.status !== "ready") return <GateScreen title="Loading your content…" busy />;
+  return <>{children}</>;
+}
+
+function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const crumbs = useBreadcrumbs(pathname);
+  const { user } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <FeedbackProvider>
-      <div className={cx(styles.shell, collapsed && styles.collapsed)}>
-        <a href="#admin-main" className={styles.skip}>
-          Skip to content
-        </a>
-        <aside className={cx(styles.sidebar, mobileOpen && styles.sidebarOpen)} aria-label="Admin navigation">
-          <div className={styles.brand}>
-            <Link href="/admin" className={styles.logo} onNavigate={() => setMobileOpen(false)}>
-              <span className={styles.logoMark}>AN.</span>
-              <span className={styles.logoText}>Portfolio Admin</span>
-            </Link>
-            <button type="button" className={styles.closeMobile} onClick={() => setMobileOpen(false)} aria-label="Close navigation">
-              <X size={18} aria-hidden="true" />
-            </button>
-          </div>
-          <nav className={styles.nav}>
-            {NAV.map((group) => (
-              <div key={group.group || "main"} className={styles.navGroup}>
-                {group.group && <p className={styles.navGroupLabel}>{group.group}</p>}
-                <ul role="list">
-                  {group.items.map((item) => {
-                    const active = isActive(pathname, item.href);
-                    return (
-                      <li key={item.href}>
-                        <Link
-                          href={item.href}
-                          className={cx(styles.navLink, active && styles.navActive)}
-                          aria-current={active ? "page" : undefined}
-                          title={collapsed ? item.label : undefined}
-                          onNavigate={() => setMobileOpen(false)}
-                        >
-                          <span aria-hidden="true">{item.icon}</span>
-                          <span className={styles.navLabel}>{item.label}</span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-          </nav>
-          <div className={styles.sidebarFooter}>
-            <ShieldAlert size={16} aria-hidden="true" />
-            <span className={styles.navLabel}>Unprotected preview — no auth yet</span>
-          </div>
-        </aside>
-        {mobileOpen && <button type="button" className={styles.scrim} aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
-
-        <div className={styles.main}>
-          <header className={styles.header}>
-            <button type="button" className={styles.menuBtn} onClick={() => setMobileOpen(true)} aria-label="Open navigation">
-              <Menu size={20} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className={styles.collapseBtn}
-              onClick={() => setCollapsed((v) => !v)}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-pressed={collapsed}
-            >
-              {collapsed ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}
-            </button>
-            <nav aria-label="Breadcrumb" className={styles.breadcrumbs}>
-              <ol role="list">
-                {crumbs.map((c, i) => (
-                  <li key={c.href}>
-                    {i > 0 && <ChevronRight size={14} aria-hidden="true" />}
-                    {i === crumbs.length - 1 ? <span aria-current="page">{c.label}</span> : <Link href={c.href}>{c.label}</Link>}
-                  </li>
-                ))}
-              </ol>
-            </nav>
-            <GlobalSearch />
-            <Link href="/" target="_blank" className={styles.viewSite}>
-              <ExternalLink size={15} aria-hidden="true" /> <span>View site</span>
-            </Link>
-            <ProfileMenu />
-          </header>
-
-          <div className={styles.banner} role="note">
-            <ShieldAlert size={16} aria-hidden="true" />
-            <p>
-              <strong>Frontend prototype.</strong> No authentication or backend. Edits are kept only in this browser&apos;s
-              local storage (demo persistence, not a database) and do not change the public site.
-            </p>
-          </div>
-
-          <main id="admin-main" className={styles.content}>
-            {children}
-          </main>
+    <div className={cx(styles.shell, collapsed && styles.collapsed)}>
+      <a href="#admin-main" className={styles.skip}>
+        Skip to content
+      </a>
+      <aside className={cx(styles.sidebar, mobileOpen && styles.sidebarOpen)} aria-label="Admin navigation">
+        <div className={styles.brand}>
+          <Link href="/admin" className={styles.logo} onNavigate={() => setMobileOpen(false)}>
+            <span className={styles.logoMark}>AN.</span>
+            <span className={styles.logoText}>Portfolio Admin</span>
+          </Link>
+          <button type="button" className={styles.closeMobile} onClick={() => setMobileOpen(false)} aria-label="Close navigation">
+            <X size={18} aria-hidden="true" />
+          </button>
         </div>
+        <nav className={styles.nav}>
+          {NAV.map((group) => (
+            <div key={group.group || "main"} className={styles.navGroup}>
+              {group.group && <p className={styles.navGroupLabel}>{group.group}</p>}
+              <ul role="list">
+                {group.items.map((item) => {
+                  const active = isActive(pathname, item.href);
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={cx(styles.navLink, active && styles.navActive)}
+                        aria-current={active ? "page" : undefined}
+                        title={collapsed ? item.label : undefined}
+                        onNavigate={() => setMobileOpen(false)}
+                      >
+                        <span aria-hidden="true">{item.icon}</span>
+                        <span className={styles.navLabel}>{item.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+        <div className={styles.sidebarFooter} title={user?.email}>
+          <ShieldCheck size={16} aria-hidden="true" />
+          <span className={styles.navLabel}>Signed in as {user?.email}</span>
+        </div>
+      </aside>
+      {mobileOpen && <button type="button" className={styles.scrim} aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
+
+      <div className={styles.main}>
+        <header className={styles.header}>
+          <button type="button" className={styles.menuBtn} onClick={() => setMobileOpen(true)} aria-label="Open navigation">
+            <Menu size={20} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className={styles.collapseBtn}
+            onClick={() => setCollapsed((v) => !v)}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-pressed={collapsed}
+          >
+            {collapsed ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}
+          </button>
+          <nav aria-label="Breadcrumb" className={styles.breadcrumbs}>
+            <ol role="list">
+              {crumbs.map((c, i) => (
+                <li key={c.href}>
+                  {i > 0 && <ChevronRight size={14} aria-hidden="true" />}
+                  {i === crumbs.length - 1 ? <span aria-current="page">{c.label}</span> : <Link href={c.href}>{c.label}</Link>}
+                </li>
+              ))}
+            </ol>
+          </nav>
+          <GlobalSearch />
+          <Link href="/" target="_blank" className={styles.viewSite}>
+            <ExternalLink size={15} aria-hidden="true" /> <span>View site</span>
+          </Link>
+          <ProfileMenu />
+        </header>
+
+        <main id="admin-main" className={styles.content}>
+          {children}
+        </main>
       </div>
+    </div>
+  );
+}
+
+export default function AdminShell({ children }: { children: ReactNode }) {
+  return (
+    <FeedbackProvider>
+      <AdminGate>
+        {/* The layout reads the pathname, which is request-time data for ids created after the build. */}
+        <Suspense fallback={<GateScreen title="Loading your content…" busy />}>
+          <DashboardLayout>{children}</DashboardLayout>
+        </Suspense>
+      </AdminGate>
     </FeedbackProvider>
   );
 }

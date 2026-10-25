@@ -150,11 +150,18 @@
   border-top: 1px solid var(--line);
   font-size: 0.76rem;
   line-height: 1.35;
-  color: var(--warning);
+  color: var(--text-dim);
 }
 
 .sidebarFooter svg {
   flex: none;
+  color: var(--success);
+}
+
+.sidebarFooter span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .collapsed .navLabel,
@@ -415,25 +422,6 @@
   cursor: not-allowed;
 }
 
-.banner {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 16px 24px 0;
-  padding: 10px 14px;
-  border: 1px solid rgba(255, 200, 92, 0.3);
-  border-radius: 10px;
-  background: rgba(255, 200, 92, 0.06);
-  font-size: 0.84rem;
-  color: var(--text-dim);
-}
-
-.banner svg {
-  flex: none;
-  margin-top: 2px;
-  color: var(--warning);
-}
-
 .content {
   flex: 1;
   padding: 24px;
@@ -511,10 +499,6 @@
   .content {
     padding: 16px;
   }
-
-  .banner {
-    margin: 12px 16px 0;
-  }
 }
 
 /* Small phones: let the search box shrink so the header never overflows. */
@@ -527,5 +511,59 @@
   .search {
     min-width: 0;
     padding: 0 8px;
+  }
+}
+
+/* Full-screen states shown before the dashboard renders: session check, no access, errors. */
+.gate {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--bg-2);
+}
+
+.gateCard {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 440px);
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  text-align: center;
+}
+
+.gateCard h1 {
+  font-size: 1.25rem;
+}
+
+.gateCard p {
+  color: var(--text-dim);
+  font-size: 0.92rem;
+}
+
+.gateCard code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--cyan);
+}
+
+.gateActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.gateSpinner {
+  justify-self: center;
+  color: var(--cyan);
+  animation: gateSpin 0.8s linear infinite;
+}
+
+@keyframes gateSpin {
+  to {
+    transform: rotate(360deg);
   }
 }

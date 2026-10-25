@@ -1,9 +1,11 @@
 "use client";
 
-import { ExternalLink, FileText, Plus, RefreshCw, Save, Trash2, Upload, X } from "lucide-react";
-import { useEffect, useId, useRef, useState, type ChangeEvent } from "react";
+import { ExternalLink, FileText, Loader2, Plus, RefreshCw, Save, Trash2, Upload, X } from "lucide-react";
+import { useId, useRef, useState, type ChangeEvent } from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
-import { formatBytes } from "@/lib/admin/localImages";
+import { errorMessage } from "@/lib/api/client";
+import { reportSaveError } from "@/lib/admin/errors";
+import { checkResumeFile, formatBytes, uploadResume } from "@/lib/admin/media";
 import { adminActions, useAdminState, useHydrated } from "@/lib/admin/store";
 import { cx } from "@/lib/utils";
 import { emailPattern, validateUrl } from "@/lib/validation";
@@ -14,48 +16,39 @@ import { ImageUrlField, ListEditor, TextArea, TextInput, Toggle } from "../field
 import { Card, LoadingRows, PageHeader } from "../ui";
 import styles from "./ProfileScreen.module.css";
 
-const MAX_RESUME_BYTES = 10 * 1024 * 1024;
-
 /**
- * Pick a resume PDF from disk. The form still stores a /public path in `resumePath` (static site, no
- * uploads): choosing a file sets it to /resume/<name>.pdf and keeps a temporary object URL for preview.
+ * Upload a resume PDF. Picking a file uploads it straight away (admin-only, checked on the server)
+ * and puts its public URL in `resumePath`; saving the profile makes the site's download buttons use it.
  */
 function ResumeUploadField({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const localUrl = useRef<string | null>(null);
   const hintId = useId();
   const errorId = useId();
-  const [local, setLocal] = useState<{ name: string; size: number; url: string } | null>(null);
+  const [local, setLocal] = useState<{ name: string; size: number } | null>(null);
   const [fileError, setFileError] = useState<string>();
+  const [uploading, setUploading] = useState(false);
 
-  function setLocalFile(next: typeof local) {
-    if (localUrl.current) URL.revokeObjectURL(localUrl.current);
-    localUrl.current = next?.url ?? null;
-    setLocal(next);
-  }
-
-  // Revoke the temporary preview URL when the screen unmounts.
-  useEffect(
-    () => () => {
-      if (localUrl.current) URL.revokeObjectURL(localUrl.current);
-    },
-    [],
-  );
-
-  function onFile(e: ChangeEvent<HTMLInputElement>) {
+  async function onFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-selecting the same file
     if (!file) return;
-    const isPdf = /\.pdf$/i.test(file.name) && (file.type === "application/pdf" || !file.type);
-    if (!isPdf) return setFileError("Please choose a PDF file (.pdf).");
-    if (file.size > MAX_RESUME_BYTES) return setFileError(`That file is ${formatBytes(file.size)}. The maximum resume size is 10 MB.`);
+    const problem = checkResumeFile(file);
+    if (problem) return setFileError(problem);
     setFileError(undefined);
-    setLocalFile({ name: file.name, size: file.size, url: URL.createObjectURL(file) });
-    onChange(`/resume/${file.name.replace(/[^\w.-]+/g, "_")}`);
+    setUploading(true);
+    try {
+      const media = await uploadResume(file);
+      setLocal({ name: file.name, size: file.size });
+      onChange(media.url);
+    } catch (err) {
+      setFileError(errorMessage(err, "Upload failed. Please try again."));
+    } finally {
+      setUploading(false);
+    }
   }
 
   function remove() {
-    setLocalFile(null);
+    setLocal(null);
     setFileError(undefined);
     onChange("");
   }
@@ -69,7 +62,16 @@ function ResumeUploadField({ value, onChange, error }: { value: string; onChange
     <div className={styles.resumeField}>
       <span className={styles.resumeLabel}>Resume</span>
       <input ref={inputRef} type="file" accept="application/pdf,.pdf" className={styles.hiddenInput} onChange={onFile} tabIndex={-1} aria-hidden="true" />
-      {fileName ? (
+      {uploading ? (
+        <div className={styles.resumeFile} role="status">
+          <span className={styles.resumeIcon}>
+            <Loader2 size={20} aria-hidden="true" />
+          </span>
+          <div className={styles.resumeMeta}>
+            <span className={styles.resumeName}>Uploading…</span>
+          </div>
+        </div>
+      ) : fileName ? (
         <div className={cx(styles.resumeFile, message && styles.resumeInvalid)}>
           <span className={styles.resumeIcon}>
             <FileText size={20} aria-hidden="true" />
@@ -78,10 +80,10 @@ function ResumeUploadField({ value, onChange, error }: { value: string; onChange
             <span className={styles.resumeName} title={fileName}>
               {fileName}
             </span>
-            <span className={styles.resumeSub}>{local ? `${formatBytes(local.size)} · unsaved` : value}</span>
+            <span className={styles.resumeSub}>{local ? `${formatBytes(local.size)} · uploaded, save the profile to use it` : value}</span>
           </div>
           <div className={styles.resumeActions}>
-            <a href={local?.url ?? value} target="_blank" rel="noopener noreferrer" className={cx(ui.btn, ui.btnGhost)}>
+            <a href={value} target="_blank" rel="noopener noreferrer" className={cx(ui.btn, ui.btnGhost)}>
               <ExternalLink size={15} aria-hidden="true" /> View PDF
             </a>
             <button type="button" className={ui.btn} onClick={openPicker} aria-describedby={describedBy}>
@@ -104,7 +106,7 @@ function ResumeUploadField({ value, onChange, error }: { value: string; onChange
         </button>
       )}
       <p id={hintId} className={styles.resumeHint}>
-        Saved as a path under /resume/. This is a static site, so copy the PDF into public/resume/ before deploying.
+        The PDF uploads as soon as you pick it. Save the profile to make the site&apos;s “Download Resume” buttons use it.
       </p>
       {message && (
         <p id={errorId} className={styles.resumeError} role="alert">
@@ -122,16 +124,21 @@ function ProfileForm({ initial }: { initial: Profile }) {
     control,
     handleSubmit,
     reset,
-    formState: { errors, isDirty },
+    setError,
+    formState: { errors, isDirty, isSubmitting },
   } = useForm<Profile>({ defaultValues: initial, mode: "onBlur" });
   const stats = useFieldArray({ control, name: "stats" });
   const summary = useWatch({ control, name: "summary" });
 
-  function onSubmit(values: Profile) {
+  async function onSubmit(values: Profile) {
     const cleaned = { ...values, stats: values.stats.map((s) => ({ ...s, value: Number(s.value) || 0 })) };
-    adminActions.update("profile", cleaned, "Updated profile");
-    reset(cleaned);
-    toast("Profile saved");
+    try {
+      await adminActions.update("profile", cleaned, "Updated profile");
+      reset(cleaned);
+      toast("Profile saved");
+    } catch (err) {
+      reportSaveError(err, toast, setError);
+    }
   }
 
   return (
@@ -140,8 +147,8 @@ function ProfileForm({ initial }: { initial: Profile }) {
         title="Profile & introduction"
         description={isDirty ? "You have unsaved changes." : "Name, role, summary, contact details and the numbers shown on the homepage."}
         actions={
-          <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>
-            <Save size={15} aria-hidden="true" /> Save profile
+          <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>
+            <Save size={15} aria-hidden="true" /> {isSubmitting ? "Saving…" : "Save profile"}
           </button>
         }
       />

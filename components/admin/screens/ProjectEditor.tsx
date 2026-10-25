@@ -33,7 +33,7 @@ function blankProject(order: number): Project {
   };
 }
 
-/** Loads a project from the demo store (or a blank one) and renders the shared form. */
+/** Loads a project from the dashboard store (or a blank one) and renders the shared form. */
 export default function ProjectEditor({ id }: { id?: string }) {
   const { projects } = useAdminState();
   const hydrated = useHydrated();
@@ -51,7 +51,7 @@ export default function ProjectEditor({ id }: { id?: string }) {
       <Card>
         <EmptyState
           title="Project not found"
-          message="It may have been deleted, or it only existed in another browser's demo storage."
+          message="It may have been deleted."
           action={
             <Link href="/admin/projects" className={ui.btn}>
               Back to projects

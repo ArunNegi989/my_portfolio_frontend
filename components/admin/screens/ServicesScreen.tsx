@@ -4,7 +4,8 @@
 import { ArrowDown, ArrowUp, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { validateImageSrc } from "@/lib/admin/localImages";
+import { reportSaveError } from "@/lib/admin/errors";
+import { validateImageSrc } from "@/lib/admin/media";
 import { adminActions, move, newId, useAdminState } from "@/lib/admin/store";
 import { cx, slugify } from "@/lib/utils";
 import { validateSlug } from "@/lib/validation";
@@ -23,15 +24,20 @@ function ServiceDialog({ item, isNew, onClose }: { item: Service; isNew: boolean
     control,
     handleSubmit,
     setValue,
-    formState: { errors },
+    setError,
+    formState: { errors, isSubmitting },
   } = useForm<Service>({ defaultValues: item });
   const taken = services.filter((s) => s.id !== item.id).map((s) => s.slug);
 
-  const save = handleSubmit((values) => {
+  const save = handleSubmit(async (values) => {
     const saved = { ...values, id: isNew ? newId("s") : values.id };
-    adminActions.upsert("services", saved, `${isNew ? "Added" : "Updated"} service “${saved.title}”`);
-    toast(isNew ? "Service added" : "Service saved");
-    onClose();
+    try {
+      await adminActions.upsert("services", saved, `${isNew ? "Added" : "Updated"} service “${saved.title}”`);
+      toast(isNew ? "Service added" : "Service saved");
+      onClose();
+    } catch (err) {
+      reportSaveError(err, toast, setError);
+    }
   });
 
   return (
@@ -45,8 +51,8 @@ function ServiceDialog({ item, isNew, onClose }: { item: Service; isNew: boolean
           <button type="button" className={ui.btn} onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>
-            Save
+          <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>
+            {isSubmitting ? "Saving…" : "Save"}
           </button>
         </>
       }
@@ -80,16 +86,32 @@ export default function ServicesScreen() {
   const [editing, setEditing] = useState<{ item: Service; isNew: boolean } | null>(null);
   const items = [...services].sort((a, b) => a.order - b.order);
 
-  function reorder(index: number, delta: number) {
+  async function reorder(index: number, delta: number) {
     const next = move(items, index, delta).map((s, i) => ({ ...s, order: i + 1 }));
-    adminActions.replace("services", next, "Reordered services");
+    try {
+      await adminActions.replace("services", next, "Reordered services");
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
+  }
+
+  async function toggleVisible(s: Service) {
+    try {
+      await adminActions.upsert("services", { ...s, visible: !s.visible }, `${s.visible ? "Hid" : "Showed"} service “${s.title}”`);
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
   async function remove(item: Service) {
     const ok = await confirm({ title: "Delete service?", message: `“${item.title}” will be removed.`, confirmLabel: "Delete", danger: true });
     if (!ok) return;
-    adminActions.remove("services", item.id, `Deleted service “${item.title}”`);
-    toast("Service deleted");
+    try {
+      await adminActions.remove("services", item.id, `Deleted service “${item.title}”`);
+      toast("Service deleted");
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
   const blank: Service = { id: "new", slug: "", title: "", shortTitle: "", description: "", deliverables: [], technologies: [], image: { src: "", alt: "" }, visible: true, order: items.length + 1 };
@@ -98,7 +120,7 @@ export default function ServicesScreen() {
     <>
       <PageHeader
         title="Services"
-        description="Proposed service categories shown on the homepage and /services."
+        description="Service categories shown on the homepage, on /services and as contact-form options."
         actions={
           <button type="button" className={cx(ui.btn, ui.btnPrimary)} onClick={() => setEditing({ item: blank, isNew: true })}>
             <Plus size={15} aria-hidden="true" /> Add service
@@ -130,7 +152,7 @@ export default function ServicesScreen() {
                 <button
                   type="button"
                   className={ui.iconBtn}
-                  onClick={() => adminActions.upsert("services", { ...s, visible: !s.visible }, `${s.visible ? "Hid" : "Showed"} service “${s.title}”`)}
+                  onClick={() => toggleVisible(s)}
                   aria-label={s.visible ? `Hide ${s.title}` : `Show ${s.title}`}
                 >
                   {s.visible ? <Eye size={15} aria-hidden="true" /> : <EyeOff size={15} aria-hidden="true" />}

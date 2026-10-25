@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { ArrowUpRight, Mail, Menu, Phone, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { cx, telHref } from "@/lib/utils";
 import { lockScroll, unlockScroll } from "@/lib/utils/scroll";
 import type { NavItem } from "@/types/content";
@@ -19,12 +19,29 @@ interface NavbarProps {
 /** Viewport width above which the inline desktop navigation replaces the menu button (keep in sync with the CSS). */
 const DESKTOP_NAV_MIN = 1100;
 
-function isActive(pathname: string, href: string) {
+function isActive(pathname: string | null, href: string) {
+  if (pathname === null) return false;
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export default function Navbar({ items, phone, email }: NavbarProps) {
-  const pathname = usePathname();
+/**
+ * The current path is URL data: on pages whose params weren't known at build time it is only
+ * available at request time. The bar renders immediately without an active link and the
+ * highlighted version streams in, instead of the whole page failing to prerender.
+ */
+export default function Navbar(props: NavbarProps) {
+  return (
+    <Suspense fallback={<NavbarView {...props} pathname={null} />}>
+      <NavbarWithPathname {...props} />
+    </Suspense>
+  );
+}
+
+function NavbarWithPathname(props: NavbarProps) {
+  return <NavbarView {...props} pathname={usePathname()} />;
+}
+
+function NavbarView({ items, phone, email, pathname }: NavbarProps & { pathname: string | null }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 

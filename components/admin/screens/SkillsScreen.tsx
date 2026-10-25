@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Pencil, Plus, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import TechIcon from "@/components/shared/TechIcon";
+import { reportSaveError } from "@/lib/admin/errors";
 import { adminActions, newId, useAdminState } from "@/lib/admin/store";
 import { cx } from "@/lib/utils";
 import type { Skill, SkillCategory, SkillCategoryKey } from "@/types/content";
@@ -16,13 +17,17 @@ import { Card, PageHeader } from "../ui";
 function CategoryDialog({ category, onClose }: { category: SkillCategory; onClose: () => void }) {
   const { skillCategories } = useAdminState();
   const { toast } = useFeedback();
-  const { register, handleSubmit, formState: { errors } } = useForm<SkillCategory>({ defaultValues: category });
-  const save = handleSubmit((values) => {
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SkillCategory>({ defaultValues: category });
+  const save = handleSubmit(async (values) => {
     const title = values.title.trim();
     const next = skillCategories.map((c) => (c.key === category.key ? { ...c, title, description: values.description.trim() } : c));
-    adminActions.update("skillCategories", next, `Updated skill category “${title}”`);
-    toast("Category saved");
-    onClose();
+    try {
+      await adminActions.update("skillCategories", next, `Updated skill category “${title}”`);
+      toast("Category saved");
+      onClose();
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   });
   return (
     <EditDialog
@@ -33,7 +38,7 @@ function CategoryDialog({ category, onClose }: { category: SkillCategory; onClos
       footer={
         <>
           <button type="button" className={ui.btn} onClick={onClose}>Cancel</button>
-          <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>Save</button>
+          <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>{isSubmitting ? "Saving…" : "Save"}</button>
         </>
       }
     >
@@ -50,6 +55,7 @@ export default function SkillsScreen() {
   const [name, setName] = useState("");
   const [category, setCategory] = useState<SkillCategoryKey>("frontend");
   const [error, setError] = useState("");
+  const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<SkillCategory | null>(null);
 
   const visible = useMemo(() => {
@@ -57,30 +63,45 @@ export default function SkillsScreen() {
     return q ? skills.filter((s) => s.name.toLowerCase().includes(q)) : skills;
   }, [skills, query]);
 
-  function add() {
+  async function add() {
     const trimmed = name.trim();
     if (!trimmed) return setError("Enter a skill name.");
     if (skills.some((s) => s.name.toLowerCase() === trimmed.toLowerCase() && s.category === category)) return setError("This skill already exists in that category.");
     const order = skills.filter((s) => s.category === category).length + 1;
-    adminActions.upsert("skills", { id: newId("k"), name: trimmed, category, order }, `Added skill “${trimmed}”`);
-    toast(`Added “${trimmed}”`);
-    setName("");
-    setError("");
+    setAdding(true);
+    try {
+      await adminActions.upsert("skills", { id: newId("k"), name: trimmed, category, order }, `Added skill “${trimmed}”`);
+      toast(`Added “${trimmed}”`);
+      setName("");
+      setError("");
+    } catch (err) {
+      reportSaveError(err, toast);
+    } finally {
+      setAdding(false);
+    }
   }
 
-  function reorder(skill: Skill, delta: number) {
+  async function reorder(skill: Skill, delta: number) {
     const inCat = skills.filter((s) => s.category === skill.category).sort((a, b) => a.order - b.order);
     const index = inCat.findIndex((s) => s.id === skill.id);
     const target = inCat[index + delta];
     if (!target) return;
     const next = skills.map((s) => (s.id === skill.id ? { ...s, order: target.order } : s.id === target.id ? { ...s, order: skill.order } : s));
-    adminActions.replace("skills", next, `Reordered “${skill.name}”`);
+    try {
+      await adminActions.replace("skills", next, `Reordered “${skill.name}”`);
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
   async function remove(skill: Skill) {
     if (!(await confirm({ title: "Remove skill?", message: `“${skill.name}” will be removed.`, confirmLabel: "Remove", danger: true }))) return;
-    adminActions.remove("skills", skill.id, `Removed skill “${skill.name}”`);
-    toast(`Removed “${skill.name}”`);
+    try {
+      await adminActions.remove("skills", skill.id, `Removed skill “${skill.name}”`);
+      toast(`Removed “${skill.name}”`);
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
   return (
@@ -112,8 +133,8 @@ export default function SkillsScreen() {
               </option>
             ))}
           </select>
-          <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>
-            <Plus size={15} aria-hidden="true" /> Add skill
+          <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={adding}>
+            <Plus size={15} aria-hidden="true" /> {adding ? "Adding…" : "Add skill"}
           </button>
         </form>
         {error && (

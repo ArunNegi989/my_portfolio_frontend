@@ -2,11 +2,22 @@
 
 import Lenis from "lenis";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { registerLenis } from "@/lib/utils/scroll";
 
-/** Lenis smooth scrolling for the public site. Disabled for reduced-motion users and touch devices. */
-export default function SmoothScroll({ enabled = true }: { enabled?: boolean }) {
+/**
+ * Lenis smooth scrolling for the public site. Disabled for reduced-motion users and touch devices.
+ * Wrapped in Suspense because the pathname is request-time data on pages rendered on demand.
+ */
+export default function SmoothScroll(props: { enabled?: boolean }) {
+  return (
+    <Suspense fallback={null}>
+      <SmoothScrollInner {...props} />
+    </Suspense>
+  );
+}
+
+function SmoothScrollInner({ enabled = true }: { enabled?: boolean }) {
   const lenisRef = useRef<Lenis | null>(null);
   const pathname = usePathname();
 

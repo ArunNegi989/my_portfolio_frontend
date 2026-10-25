@@ -170,3 +170,17 @@
     flex: 1 1 auto;
   }
 }
+
+/* Upload in progress */
+.spin {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 6px;
+  animation: imageUploadSpin 0.8s linear infinite;
+}
+
+@keyframes imageUploadSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

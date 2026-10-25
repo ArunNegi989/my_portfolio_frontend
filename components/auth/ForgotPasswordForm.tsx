@@ -32,7 +32,7 @@ export default function ForgotPasswordForm() {
         error={errors.email}
       />
       <FormResult result={result} />
-      <SubmitButton submitting={submitting} icon={<Send size={18} />} busyLabel="Checking…">
+      <SubmitButton submitting={submitting} icon={<Send size={18} />} busyLabel="Sending…">
         Request reset link
       </SubmitButton>
     </form>

@@ -5,8 +5,8 @@ import { posts } from "@/data/blog";
 
 export const metadata = { title: "Edit article" };
 
-// Seeded articles are prerendered; ids created in the browser render on demand
-// and are resolved from demo storage on the client.
+// Only the page shell is prerendered (for the seeded ids); other ids render on demand. The article
+// itself is always loaded from the API on the client, after the admin session is confirmed.
 export async function generateStaticParams() {
   return posts.map((p) => ({ id: p.id }));
 }

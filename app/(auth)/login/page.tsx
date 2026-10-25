@@ -14,7 +14,6 @@ export default function LoginPage() {
       eyebrow="Admin access"
       title="Welcome back"
       description="Sign in to manage your portfolio content."
-      demoNote="Sign-in isn't connected to a backend yet, so no account is checked and you won't be signed in."
       footer={
         <>
           Don&apos;t have an account?{" "}

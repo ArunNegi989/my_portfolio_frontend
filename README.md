@@ -1,6 +1,6 @@
-# Arun Negi — 3D Developer Portfolio + Admin Dashboard (Phase 1)
+# Arun Negi — 3D Developer Portfolio + Admin Dashboard
 
-A cinematic, 3D developer portfolio for **Arun Negi, Full Stack Developer**, with a separate admin dashboard UI for managing content. Phase 1 is a **complete static frontend**: no backend, no database, no authentication.
+A cinematic, 3D developer portfolio for **Arun Negi, Full Stack Developer**, with an admin dashboard for managing all of its content. Content, accounts, uploads and contact messages are stored by the separate API in [`../my-portfolio-backend`](../my-portfolio-backend) (Node.js, Express, MongoDB).
 
 Built with **Next.js 16 (App Router, Cache Components) · TypeScript · CSS Modules · React Three Fiber + Drei · Motion · Lenis · React Hook Form · Lucide**.
 
@@ -8,20 +8,30 @@ Built with **Next.js 16 (App Router, Cache Components) · TypeScript · CSS Modu
 
 ## Getting started
 
+Set up and start the backend first (see [`my-portfolio-backend/README.md`](../my-portfolio-backend/README.md)), then:
+
 ```bash
+cp .env.example .env.local   # NEXT_PUBLIC_API_URL, NEXT_PUBLIC_SITE_URL, REVALIDATE_SECRET
 npm install
-npm run dev        # http://localhost:3000
+npm run dev        # http://localhost:3000 — dashboard at /login
 npm run lint       # ESLint
 npx tsc --noEmit   # type-check
-npm run build      # production build (prerenders ~80 pages)
+npm run build      # production build
 npm start          # serve the production build
 ```
 
-Optional: copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_SITE_URL` once the production domain is decided. It drives canonical URLs, Open Graph URLs, `sitemap.xml` and `robots.txt`. It defaults to `http://localhost:3000`.
+| Variable (`.env.local`) | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_API_URL` | API base URL including `/api/v1`, e.g. `http://localhost:5000/api/v1`. Leave empty to render the static `/data` content without a backend (the dashboard needs the API) |
+| `NEXT_PUBLIC_SITE_URL` | Public URL of this site: canonical URLs, Open Graph, `sitemap.xml`, `robots.txt` |
+| `REVALIDATE_SECRET` | Same value as in the backend; lets the API refresh cached pages after admin changes |
+| `API_URL`, `API_PROXY_TARGET` | Optional; for internal URLs and for deploying the API on another domain (backend README → Deployment) |
+
+`NEXT_PUBLIC_*` values are inlined at build time: rebuild after changing them.
 
 ---
 
-## What's in Phase 1
+## What's included
 
 ### Public site
 
@@ -33,11 +43,12 @@ Optional: copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_SITE_URL` onc
 | `/projects/[slug]` | Case-study template: problem, goals, solution, features, stack, process, verified results, gallery + lightbox, prev/next, related |
 | `/experience` | Full animated timeline from the resume |
 | `/skills` | Skill categories (no invented proficiency ratings) |
-| `/services` | Seven proposed, editable service categories |
+| `/services` | Service categories (editable in the dashboard) |
 | `/blog` | Featured article, search, category filters, "load more" |
 | `/blog/[slug]` | TOC with active heading, reading progress, copy-code buttons, share links, related, prev/next, JSON-LD |
-| `/contact` | Validated contact form (demo) + email/LinkedIn/GitHub |
+| `/contact` | Validated contact form (stored by the API, emailed to the owner) + email/LinkedIn/GitHub |
 | 404 | Custom not-found page |
+| `/login`, `/signup`, `/forgot-password`, `/reset-password` | Dashboard sign-in, account request, password reset by email |
 
 ### Cinematic intro
 
@@ -49,7 +60,7 @@ The exact sequence: `ARUN NEGI` / `PORTFOLIO.EXE` → zoom toward the viewer →
 - `prefers-reduced-motion`: a short fade-only version.
 - No audio is bundled; the setting is off by default.
 - Without JavaScript, the overlay is hidden by CSS.
-- Enable or disable it in `data/settings.ts` (`introEnabled`).
+- Enable or disable it in **Admin → Settings → Cinematic intro**.
 
 ### 3D hero
 
@@ -60,15 +71,20 @@ The exact sequence: `ARUN NEGI` / `PORTFOLIO.EXE` → zoom toward the viewer →
 
 ### Admin dashboard (`/admin`)
 
-Overview (stats computed from the data, recent activity, recent projects, category chart, quick actions) plus every management screen: profile, pages & sections, projects (list/new/edit), blog (list/new/edit with Markdown preview), experience, skills, services, education, testimonials, social links, SEO and settings.
+Overview (stats, recent activity, recent projects, category chart, quick actions) plus every management screen: profile, pages & sections, projects (list/new/edit), blog (list/new/edit with Markdown preview), experience, skills, services, education, testimonials, **contact messages**, social links, SEO and settings.
 
-It includes typed React Hook Form forms with shared validation, unique-slug checks, URL validation, image-URL previews with failure handling, a gallery editor (add/edit/reorder/remove), confirmation dialogs, toasts, search, filters, empty and loading states, a collapsible sidebar, breadcrumbs, global search and a profile-menu mockup.
+- **Sign-in required.** `/admin` renders nothing until the API confirms an admin session; signed-out visitors are sent to `/login`. Sign out from the profile menu.
+- **Saved to the database.** Every form saves through the API (field errors from the server appear on the matching inputs) and the public site updates on the next visit.
+- **Uploads.** Image fields accept a URL or an uploaded file (JPG, PNG, WEBP, GIF ≤ 5 MB); the resume field uploads a PDF (≤ 10 MB).
+- Typed React Hook Form forms with shared validation, unique-slug checks, previews, gallery editor, confirmation dialogs, toasts, search, filters, empty and loading states.
 
 ---
 
 ## Content architecture
 
-All content is typed (`types/content.ts`) and lives in `/data`:
+All content is typed (`types/content.ts`). It is stored in MongoDB by the backend and read through **`lib/data/index.ts`**: each function fetches one dataset from the public API inside `"use cache"` with `cacheLife("minutes")` and a cache tag (`projects`, `profile`, …). After every admin change the backend calls **`app/api/revalidate`** (protected by `REVALIDATE_SECRET`), which expires the affected tags so the next visit renders fresh content.
+
+The original typed modules in `/data` are kept as the **seed source** (`npm run build-seed` / `npm run seed` in the backend) and as a **fallback**: they are rendered when `NEXT_PUBLIC_API_URL` is not set, and if the API is unreachable (the error is logged instead of breaking the page):
 
 ```text
 data/profile.ts       name, role, summary, stats, contact, resume path
@@ -84,7 +100,7 @@ data/settings.ts      site settings, navigation, social links, page imagery
 data/seo.ts           per-page metadata
 ```
 
-Pages never import `/data` directly. They call the async functions in **`lib/data/index.ts`**, which is the single place to swap in a real API or database later.
+Pages never import `/data` directly; they call the async functions in `lib/data/index.ts`. The dashboard uses `lib/admin/store.ts` (loads everything from `GET /admin/content`, saves through the admin API) and `lib/api/client.ts` (cookies, CSRF token, automatic session refresh).
 
 Blog articles use a small Markdown subset rendered by `lib/markdown` + `components/shared/Markdown.tsx`: `##`/`###` headings, lists, quotes, fenced code, images, inline code, bold, italic and links. The same renderer powers the admin preview.
 
@@ -109,25 +125,12 @@ Blog articles use a small Markdown subset rendered by `lib/markdown` + `componen
 
 ---
 
-## Mock-data limitations (important)
+## Good to know
 
-- **The public site always reads `/data`.** Admin edits do **not** change the public site.
-- Admin edits are stored in **this browser's `localStorage`** through the adapter in `lib/admin/storage.ts`. This is demo persistence, **not a database**. It's per-device, can be cleared by the browser, and is invisible to visitors.
-- To make an edit real today: **Admin → Settings → Export content as JSON**, then copy the relevant parts into `/data/*.ts`. **Reset demo data** reloads everything from `/data`.
-- Admin routes are **unprotected** (no authentication). Don't deploy `/admin` publicly before Phase 2, or block it at your host. It is already `noindex` and disallowed in `robots.txt`.
-- The contact form validates input but **sends nothing**. After submitting, it offers a pre-filled `mailto:` link instead.
-- Image fields take **URLs only**; nothing is uploaded.
-
----
-
-## Phase 2: backend integration plan
-
-1. **Auth:** protect `/admin` (for example with `proxy.ts` plus server-side session checks in `app/admin/layout.tsx`), add a login page and role checks.
-2. **API/database:** replace the bodies of the functions in `lib/data/index.ts` with database or API calls (keep the `types/content.ts` shapes). Use `"use cache"` + `cacheTag` for public reads.
-3. **Admin writes:** replace `lib/admin/storage.ts` / `adminActions` with Server Actions or REST calls, and revalidate with `updateTag`/`revalidateTag` after saves.
-4. **Media:** add an upload endpoint and storage (S3, Cloudinary, …). Add its host to `images.remotePatterns`.
-5. **Contact:** send form submissions through an email provider (Resend, SES, …) with spam protection.
-6. **Publishing workflow:** drafts and scheduled publishing on the server.
+- **Navigation and inner-page hero copy** ("Selected Work", "The Toolkit", …) stay in code; they mirror the app's routes and the dashboard has no fields for them.
+- **Pages for projects/articles created after a build** render on their first visit. A slug that doesn't exist shows the 404 page with a `noindex` tag; because those pages stream, Next.js keeps the HTTP status at 200 (documented behaviour).
+- **Testimonials** are managed in the dashboard and served by the API, but the public site has no testimonials section yet.
+- Security details, the authentication flow and deployment options are in the backend's `README.md` and `SECURITY.md`.
 
 ---
 
@@ -137,7 +140,9 @@ Blog articles use a small Markdown subset rendered by `lib/markdown` + `componen
 app/
   layout.tsx              root layout, fonts, intro boot script
   (public)/               public site with navbar/footer layout
-  admin/                  admin layout + all management routes
+  (auth)/                 login, signup, forgot-password, reset-password
+  admin/                  admin layout + all management routes (incl. messages)
+  api/revalidate/         cache refresh webhook called by the backend
   sitemap.ts, robots.ts, not-found.tsx
 components/
   animations/             intro, intro store, Lenis, reveal, count-up
@@ -145,8 +150,8 @@ components/
   public/                 navbar, footer, cards, explorers, article parts, sections
   admin/                  shell, UI kit, fields, feedback, screens
   shared/                 SmartImage, Markdown, buttons, tags, brand icons
-data/                     typed content (source of truth)
-lib/                      data access, markdown, SEO, validation, admin store, utils
+data/                     original typed content (seed source + offline fallback)
+lib/                      API client, data access, auth, admin store, markdown, SEO, validation, utils
 types/content.ts          shared content types
 public/resume/            Arun_Negi_Resume.pdf (Download Resume)
 ```

@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- admin previews show arbitrary URLs, including hosts not configured for next/image */
 import { ArrowDown, ArrowUp, ImageOff, Plus, Trash2, X } from "lucide-react";
 import { useId, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
-import { isExpiredLocalImage, validateImageSrc } from "@/lib/admin/localImages";
+import { validateImageSrc } from "@/lib/admin/media";
 import { move, newId } from "@/lib/admin/store";
 import { cx } from "@/lib/utils";
 import type { ImageAsset } from "@/types/content";
@@ -222,7 +222,7 @@ export function ImagePreview({ src, alt, className }: { src: string; alt: string
   const [failed, setFailed] = useState<string | null>(null);
   const valid = src && validateImageSrc(src) === true;
   if (!valid || failed === src) {
-    const reason = isExpiredLocalImage(src) ? "Uploaded image expired — upload it again" : "Preview unavailable — check the URL";
+    const reason = "Preview unavailable — check the URL";
     return (
       <div className={cx(styles.preview, styles.previewEmpty, className)} role="img" aria-label={src ? "Image failed to load" : "No image"}>
         <ImageOff size={22} aria-hidden="true" />
@@ -233,7 +233,7 @@ export function ImagePreview({ src, alt, className }: { src: string; alt: string
   return <img src={src} alt={alt} className={cx(styles.preview, className)} onError={() => setFailed(src)} loading="lazy" />;
 }
 
-/** Image URL or locally picked file, plus alt text, with live preview. Picked files are previewed only — nothing is uploaded. */
+/** Image URL or uploaded file, plus alt text, with live preview. */
 export function ImageUrlField({ label, value, onChange, error }: { label: string; value: ImageAsset; onChange: (v: ImageAsset) => void; error?: string }) {
   const srcCheck = value.src ? validateImageSrc(value.src) : true;
   return (
@@ -247,7 +247,7 @@ export function ImageUrlField({ label, value, onChange, error }: { label: string
   );
 }
 
-/** Add, edit, reorder and remove gallery images; each one is a URL or a locally picked file. */
+/** Add, edit, reorder and remove gallery images; each one is a URL or an uploaded file. */
 export function GalleryEditor({ value, onChange }: { value: ImageAsset[]; onChange: (v: ImageAsset[]) => void }) {
   // Stable row keys so each row's URL draft / picked file follows its image when reordering.
   const [keys, setKeys] = useState(() => value.map((_, i) => `img-${i}`));
@@ -302,7 +302,7 @@ export function GalleryEditor({ value, onChange }: { value: ImageAsset[]; onChan
       <button type="button" className={ui.btn} onClick={() => update([...value, { src: "", alt: "" }], [...rowKeys, newId("img")])} style={{ justifySelf: "start" }}>
         <Plus size={15} aria-hidden="true" /> Add image
       </button>
-      <p className={styles.hint}>Each image can use a URL or a file from this computer (JPG, PNG, WEBP or GIF, max 5 MB). Picked files are previewed locally and are not uploaded.</p>
+      <p className={styles.hint}>Each image can use a URL or a file from this computer (JPG, PNG, WEBP or GIF, max 5 MB). Files upload as soon as you pick them; save the project to keep the change.</p>
     </div>
   );
 }

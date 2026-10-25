@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import ProjectCard from "@/components/public/ProjectCard";
-import { validateImageSrc } from "@/lib/admin/localImages";
+import { reportSaveError } from "@/lib/admin/errors";
+import { validateImageSrc } from "@/lib/admin/media";
 import { adminActions, newId, useAdminState } from "@/lib/admin/store";
 import { cx, slugify } from "@/lib/utils";
 import { validateSlug, validateUrl, validateWebsiteUrl } from "@/lib/validation";
@@ -31,6 +32,7 @@ export default function ProjectForm({ initial, isNew }: ProjectFormProps) {
     handleSubmit,
     setValue,
     reset,
+    setError,
     formState: { errors, isDirty, isSubmitting },
   } = useForm<Project>({ defaultValues: initial, mode: "onBlur" });
   const process = useFieldArray({ control, name: "process" });
@@ -39,7 +41,7 @@ export default function ProjectForm({ initial, isNew }: ProjectFormProps) {
   const categories = Array.from(new Set(projects.map((p) => p.category)));
   const preview = useWatch({ control }) as Project;
 
-  function onSubmit(values: Project) {
+  async function onSubmit(values: Project) {
     const cleaned: Project = {
       ...values,
       id: isNew ? newId("p") : values.id,
@@ -48,31 +50,39 @@ export default function ProjectForm({ initial, isNew }: ProjectFormProps) {
       liveUrl: values.liveUrl?.trim() || undefined,
       githubUrl: values.githubUrl?.trim() || undefined,
     };
-    adminActions.upsert("projects", cleaned, `${isNew ? "Created" : "Updated"} project “${cleaned.title}”`);
-    toast(isNew ? "Project created" : "Project saved");
-    if (isNew) {
-      // Activity keeps this page mounted; start the next visit with a clean form.
-      reset(initial);
-      setSlugTouched(false);
-      router.push(`/admin/projects/${cleaned.id}`);
-    } else {
-      reset(cleaned);
+    try {
+      const saved = await adminActions.upsert("projects", cleaned, `${isNew ? "Created" : "Updated"} project “${cleaned.title}”`);
+      toast(isNew ? "Project created" : "Project saved");
+      if (isNew) {
+        // Activity keeps this page mounted; start the next visit with a clean form.
+        reset(initial);
+        setSlugTouched(false);
+        router.push(`/admin/projects/${saved.id}`);
+      } else {
+        reset(saved);
+      }
+    } catch (err) {
+      reportSaveError(err, toast, setError);
     }
   }
 
   async function onDelete() {
-    const ok = await confirm({ title: "Delete project?", message: `“${initial.title}” will be removed from the demo data.`, confirmLabel: "Delete", danger: true });
+    const ok = await confirm({ title: "Delete project?", message: `“${initial.title}” will be permanently deleted.`, confirmLabel: "Delete", danger: true });
     if (!ok) return;
-    adminActions.remove("projects", initial.id, `Deleted project “${initial.title}”`);
-    toast("Project deleted");
-    router.push("/admin/projects");
+    try {
+      await adminActions.remove("projects", initial.id, `Deleted project “${initial.title}”`);
+      toast("Project deleted");
+      router.push("/admin/projects");
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit, () => toast("Please fix the highlighted fields", "error"))} noValidate>
       <PageHeader
         title={isNew ? "New project" : `Edit: ${initial.title}`}
-        description={isDirty ? "You have unsaved changes." : "All changes saved to demo storage."}
+        description={isDirty ? "You have unsaved changes." : isNew ? "Drafts stay private until you publish them." : "All changes saved."}
         actions={
           <>
             {!isNew && (
@@ -81,7 +91,7 @@ export default function ProjectForm({ initial, isNew }: ProjectFormProps) {
               </button>
             )}
             <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>
-              <Save size={15} aria-hidden="true" /> {isNew ? "Create project" : "Save changes"}
+              <Save size={15} aria-hidden="true" /> {isSubmitting ? "Saving…" : isNew ? "Create project" : "Save changes"}
             </button>
           </>
         }
@@ -175,7 +185,7 @@ export default function ProjectForm({ initial, isNew }: ProjectFormProps) {
             </div>
           </Card>
 
-          <Card title="Media" subtitle="Paste an image URL or pick a file. Picked files preview in this browser only and are not uploaded.">
+          <Card title="Media" subtitle="Paste an image URL or upload a file (JPG, PNG, WEBP or GIF, max 5 MB).">
             <div className={ui.stack}>
               <Controller
                 control={control}
@@ -236,7 +246,7 @@ export default function ProjectForm({ initial, isNew }: ProjectFormProps) {
           </Card>
           <div className={cx(ui.notice, ui.noticeInfo)}>
             <Info size={16} aria-hidden="true" />
-            <p>Saved to this browser only. To publish for real, copy the project into /data/projects.ts (or connect a backend in Phase 2).</p>
+            <p>Set the status to Published to show the project on the public site. Drafts are only visible here.</p>
           </div>
         </div>
       </div>

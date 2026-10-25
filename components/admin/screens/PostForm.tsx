@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import Markdown from "@/components/shared/Markdown";
-import { validateImageSrc } from "@/lib/admin/localImages";
+import { reportSaveError } from "@/lib/admin/errors";
+import { validateImageSrc } from "@/lib/admin/media";
 import { adminActions, newId, useAdminState } from "@/lib/admin/store";
 import { parseMarkdown } from "@/lib/markdown";
 import { cx, readingTime, slugify } from "@/lib/utils";
@@ -29,7 +30,8 @@ export default function PostForm({ initial, isNew }: { initial: BlogPost; isNew:
     handleSubmit,
     setValue,
     reset,
-    formState: { errors, isDirty },
+    setError,
+    formState: { errors, isDirty, isSubmitting },
   } = useForm<BlogPost>({ defaultValues: initial, mode: "onBlur" });
 
   const values = useWatch({ control }) as BlogPost;
@@ -37,33 +39,40 @@ export default function PostForm({ initial, isNew }: { initial: BlogPost; isNew:
   const categories = Array.from(new Set(posts.map((p) => p.category)));
   const blocks = useMemo(() => (tab === "preview" ? parseMarkdown(values.content || "") : []), [tab, values.content]);
 
-  function onSubmit(data: BlogPost) {
-    const saved = { ...data, id: isNew ? newId("b") : data.id };
-    adminActions.upsert("posts", saved, `${isNew ? "Created" : "Updated"} article “${saved.title}”`);
-    toast(isNew ? "Article created" : "Article saved");
-    if (isNew) {
-      // Activity keeps this page mounted; start the next visit with a clean form.
-      reset(initial);
-      setSlugTouched(false);
-      router.push(`/admin/blog/${saved.id}`);
-    } else {
-      reset(saved);
+  async function onSubmit(data: BlogPost) {
+    try {
+      const saved = await adminActions.upsert("posts", { ...data, id: isNew ? newId("b") : data.id }, `${isNew ? "Created" : "Updated"} article “${data.title}”`);
+      toast(isNew ? "Article created" : "Article saved");
+      if (isNew) {
+        // Activity keeps this page mounted; start the next visit with a clean form.
+        reset(initial);
+        setSlugTouched(false);
+        router.push(`/admin/blog/${saved.id}`);
+      } else {
+        reset(saved);
+      }
+    } catch (err) {
+      reportSaveError(err, toast, setError);
     }
   }
 
   async function onDelete() {
-    const ok = await confirm({ title: "Delete article?", message: `“${initial.title}” will be removed from the demo data.`, confirmLabel: "Delete", danger: true });
+    const ok = await confirm({ title: "Delete article?", message: `“${initial.title}” will be permanently deleted.`, confirmLabel: "Delete", danger: true });
     if (!ok) return;
-    adminActions.remove("posts", initial.id, `Deleted article “${initial.title}”`);
-    toast("Article deleted");
-    router.push("/admin/blog");
+    try {
+      await adminActions.remove("posts", initial.id, `Deleted article “${initial.title}”`);
+      toast("Article deleted");
+      router.push("/admin/blog");
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit, () => toast("Please fix the highlighted fields", "error"))} noValidate>
       <PageHeader
         title={isNew ? "New article" : `Edit: ${initial.title}`}
-        description={isDirty ? "You have unsaved changes." : "All changes saved to demo storage."}
+        description={isDirty ? "You have unsaved changes." : isNew ? "Drafts stay private until you publish them." : "All changes saved."}
         actions={
           <>
             {!isNew && (
@@ -71,8 +80,8 @@ export default function PostForm({ initial, isNew }: { initial: BlogPost; isNew:
                 <Trash2 size={15} aria-hidden="true" /> Delete
               </button>
             )}
-            <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>
-              <Save size={15} aria-hidden="true" /> {isNew ? "Create article" : "Save changes"}
+            <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>
+              <Save size={15} aria-hidden="true" /> {isSubmitting ? "Saving…" : isNew ? "Create article" : "Save changes"}
             </button>
           </>
         }
@@ -167,7 +176,7 @@ export default function PostForm({ initial, isNew }: { initial: BlogPost; isNew:
           </Card>
           <div className={cx(ui.notice, ui.noticeInfo)}>
             <Info size={16} aria-hidden="true" />
-            <p>Saved to this browser only. To publish for real, add the article to /data/blog.ts (or connect a backend in Phase 2).</p>
+            <p>Set the status to Published to show the article on the public blog. Drafts are only visible here.</p>
           </div>
         </div>
       </div>

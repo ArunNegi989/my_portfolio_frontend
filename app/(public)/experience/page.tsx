@@ -7,7 +7,9 @@ import { getExperience, getProfile, getProjects } from "@/lib/data";
 import { pageMetadata } from "@/lib/seo";
 import styles from "../inner.module.css";
 
-export const metadata = pageMetadata("/experience");
+export function generateMetadata() {
+  return pageMetadata("/experience");
+}
 
 export default async function ExperiencePage() {
   const [experience, projects, profile] = await Promise.all([getExperience(), getProjects(), getProfile()]);

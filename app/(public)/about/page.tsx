@@ -10,7 +10,9 @@ import { getEducation, getExperience, getProfile, getSettings, getSkills } from 
 import { pageMetadata } from "@/lib/seo";
 import styles from "../inner.module.css";
 
-export const metadata = pageMetadata("/about");
+export function generateMetadata() {
+  return pageMetadata("/about");
+}
 
 export default async function AboutPage() {
   const [profile, { education, certifications }, experience, { skills }, settings] = await Promise.all([

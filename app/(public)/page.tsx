@@ -28,7 +28,9 @@ import { pageMetadata } from "@/lib/seo";
 import type { HomeSectionKey } from "@/types/content";
 import styles from "./home.module.css";
 
-export const metadata = pageMetadata("/");
+export function generateMetadata() {
+  return pageMetadata("/");
+}
 
 export default async function HomePage() {
   const [home, profile, settings, featured, projects, skills, experience, services, posts, socialLinks] = await Promise.all([

@@ -15,7 +15,7 @@ export default function SignupPage() {
       eyebrow="New account"
       title="Create account"
       description="Set up access to the portfolio dashboard."
-      demoNote="Account creation isn't connected to a backend yet, so no account is created and nothing you enter is saved."
+      note="New accounts don't get dashboard access automatically. An existing administrator has to grant it."
       footer={
         <>
           Already have an account?{" "}

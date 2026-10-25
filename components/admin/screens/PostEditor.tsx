@@ -41,7 +41,7 @@ export default function PostEditor({ id }: { id?: string }) {
       <Card>
         <EmptyState
           title="Article not found"
-          message="It may have been deleted, or it only existed in another browser's demo storage."
+          message="It may have been deleted."
           action={
             <Link href="/admin/blog" className={ui.btn}>
               Back to blog

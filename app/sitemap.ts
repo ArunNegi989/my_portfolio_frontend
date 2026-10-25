@@ -1,11 +1,10 @@
 import type { MetadataRoute } from "next";
-import { pageSeo } from "@/data/seo";
 import { settings } from "@/data/settings";
-import { getPosts, getProjects } from "@/lib/data";
+import { getAllPageSeo, getPosts, getProjects } from "@/lib/data";
 import { absoluteUrl } from "@/lib/utils";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [projects, posts] = await Promise.all([getProjects(), getPosts()]);
+  const [projects, posts, pageSeo] = await Promise.all([getProjects(), getPosts(), getAllPageSeo()]);
   return [
     ...pageSeo.map((page) => ({
       url: absoluteUrl(settings.siteUrl, page.path),

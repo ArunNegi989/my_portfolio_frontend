@@ -1,30 +1,13 @@
 "use client";
 
-import { Check, Circle, Lock, Mail, ShieldCheck, User, UserPlus } from "lucide-react";
+import { Lock, Mail, ShieldCheck, User, UserPlus } from "lucide-react";
 import { signUp } from "@/lib/auth";
-import { PASSWORD_RULES, type SignupValues, validateSignup } from "@/lib/auth/validation";
+import { type SignupValues, validateSignup } from "@/lib/auth/validation";
 import styles from "./Auth.module.css";
-import { CheckboxField, FormResult, PasswordField, SubmitButton, TextField } from "./fields";
+import { CheckboxField, FormResult, PasswordChecklist, PasswordField, SubmitButton, TextField } from "./fields";
 import { useAuthForm } from "./useAuthForm";
 
 const initial: SignupValues = { name: "", email: "", password: "", confirmPassword: "", acceptTerms: false };
-
-function PasswordChecklist({ value }: { value: string }) {
-  return (
-    <ul role="list" className={styles.rules}>
-      {PASSWORD_RULES.map((rule) => {
-        const met = rule.test(value);
-        return (
-          <li key={rule.id} className={met ? styles.ruleMet : undefined}>
-            {met ? <Check size={14} aria-hidden="true" /> : <Circle size={14} aria-hidden="true" />}
-            {rule.label}
-            <span className="sr-only">{met ? " (met)" : " (not met yet)"}</span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
 
 export default function SignupForm() {
   const { values, errors, submitting, result, setValue, blur, handleSubmit } = useAuthForm({

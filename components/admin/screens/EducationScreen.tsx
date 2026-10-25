@@ -3,6 +3,7 @@
 import { Award, GraduationCap, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { reportSaveError } from "@/lib/admin/errors";
 import { adminActions, newId, useAdminState } from "@/lib/admin/store";
 import { cx } from "@/lib/utils";
 import type { Certification, Education } from "@/types/content";
@@ -16,12 +17,16 @@ const YEAR = /^(19|20)\d{2}$/;
 
 function EducationDialog({ item, isNew, onClose }: { item: Education; isNew: boolean; onClose: () => void }) {
   const { toast } = useFeedback();
-  const { register, handleSubmit, formState: { errors } } = useForm<Education>({ defaultValues: item });
-  const save = handleSubmit((values) => {
+  const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<Education>({ defaultValues: item });
+  const save = handleSubmit(async (values) => {
     const saved = { ...values, id: isNew ? newId("e") : values.id };
-    adminActions.upsert("education", saved, `${isNew ? "Added" : "Updated"} education “${saved.degree}”`);
-    toast("Education saved");
-    onClose();
+    try {
+      await adminActions.upsert("education", saved, `${isNew ? "Added" : "Updated"} education “${saved.degree}”`);
+      toast("Education saved");
+      onClose();
+    } catch (err) {
+      reportSaveError(err, toast, setError);
+    }
   });
   return (
     <EditDialog
@@ -32,7 +37,7 @@ function EducationDialog({ item, isNew, onClose }: { item: Education; isNew: boo
       footer={
         <>
           <button type="button" className={ui.btn} onClick={onClose}>Cancel</button>
-          <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>Save</button>
+          <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>{isSubmitting ? "Saving…" : "Save"}</button>
         </>
       }
     >
@@ -56,12 +61,16 @@ function EducationDialog({ item, isNew, onClose }: { item: Education; isNew: boo
 
 function CertificationDialog({ item, isNew, onClose }: { item: Certification; isNew: boolean; onClose: () => void }) {
   const { toast } = useFeedback();
-  const { register, handleSubmit, formState: { errors } } = useForm<Certification>({ defaultValues: item });
-  const save = handleSubmit((values) => {
+  const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<Certification>({ defaultValues: item });
+  const save = handleSubmit(async (values) => {
     const saved = { ...values, id: isNew ? newId("c") : values.id };
-    adminActions.upsert("certifications", saved, `${isNew ? "Added" : "Updated"} certification “${saved.title}”`);
-    toast("Certification saved");
-    onClose();
+    try {
+      await adminActions.upsert("certifications", saved, `${isNew ? "Added" : "Updated"} certification “${saved.title}”`);
+      toast("Certification saved");
+      onClose();
+    } catch (err) {
+      reportSaveError(err, toast, setError);
+    }
   });
   return (
     <EditDialog
@@ -72,7 +81,7 @@ function CertificationDialog({ item, isNew, onClose }: { item: Certification; is
       footer={
         <>
           <button type="button" className={ui.btn} onClick={onClose}>Cancel</button>
-          <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>Save</button>
+          <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>{isSubmitting ? "Saving…" : "Save"}</button>
         </>
       }
     >
@@ -90,13 +99,21 @@ export default function EducationScreen() {
 
   async function removeEdu(item: Education) {
     if (!(await confirm({ title: "Delete education?", message: `“${item.degree}, ${item.institution}” will be removed.`, confirmLabel: "Delete", danger: true }))) return;
-    adminActions.remove("education", item.id, `Deleted education “${item.degree}”`);
-    toast("Education deleted");
+    try {
+      await adminActions.remove("education", item.id, `Deleted education “${item.degree}”`);
+      toast("Education deleted");
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
   async function removeCert(item: Certification) {
     if (!(await confirm({ title: "Delete certification?", message: `“${item.title}” will be removed.`, confirmLabel: "Delete", danger: true }))) return;
-    adminActions.remove("certifications", item.id, `Deleted certification “${item.title}”`);
-    toast("Certification deleted");
+    try {
+      await adminActions.remove("certifications", item.id, `Deleted certification “${item.title}”`);
+      toast("Certification deleted");
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
   return (

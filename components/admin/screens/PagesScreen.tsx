@@ -2,6 +2,7 @@
 
 import { ArrowDown, ArrowUp, Info, Save } from "lucide-react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
+import { reportSaveError } from "@/lib/admin/errors";
 import { adminActions, move, useAdminState, useHydrated } from "@/lib/admin/store";
 import { cx } from "@/lib/utils";
 import type { HomeContent } from "@/types/content";
@@ -20,15 +21,20 @@ function HomeEditor({ initial }: { initial: HomeContent }) {
     control,
     handleSubmit,
     reset,
-    formState: { errors, isDirty },
+    setError,
+    formState: { errors, isDirty, isSubmitting },
   } = useForm<HomeContent>({ defaultValues: initial });
   const sections = useFieldArray({ control, name: "sections" });
   const hero = useWatch({ control }) as HomeContent;
 
-  function onSubmit(values: HomeContent) {
-    adminActions.update("home", values, "Updated homepage content");
-    reset(values);
-    toast("Homepage content saved");
+  async function onSubmit(values: HomeContent) {
+    try {
+      await adminActions.update("home", values, "Updated homepage content");
+      reset(values);
+      toast("Homepage content saved");
+    } catch (err) {
+      reportSaveError(err, toast, setError);
+    }
   }
 
   return (
@@ -37,8 +43,8 @@ function HomeEditor({ initial }: { initial: HomeContent }) {
         title="Pages & sections"
         description={isDirty ? "You have unsaved changes." : "Edit the homepage template: hero copy, section order of content, visibility and featured work."}
         actions={
-          <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>
-            <Save size={15} aria-hidden="true" /> Save homepage
+          <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>
+            <Save size={15} aria-hidden="true" /> {isSubmitting ? "Saving…" : "Save homepage"}
           </button>
         }
       />
@@ -168,7 +174,7 @@ function HomeEditor({ initial }: { initial: HomeContent }) {
           </Card>
           <div className={cx(ui.notice, ui.noticeInfo)}>
             <Info size={16} aria-hidden="true" />
-            <p>Statistics live under Profile. Saved changes stay in this browser; the public site reads /data/home.ts.</p>
+            <p>Statistics live under Profile. Saved changes appear on the homepage straight away.</p>
           </div>
         </div>
       </div>

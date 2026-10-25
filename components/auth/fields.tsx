@@ -1,11 +1,30 @@
 "use client";
 
-import { AlertCircle, Eye, EyeOff, Info, Loader2 } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Circle, Eye, EyeOff, Info, Loader2 } from "lucide-react";
 import { type InputHTMLAttributes, type ReactNode, useId, useState } from "react";
 import buttonStyles from "@/components/shared/Button.module.css";
 import type { AuthResult } from "@/lib/auth";
+import { PASSWORD_RULES } from "@/lib/auth/validation";
 import { cx } from "@/lib/utils";
 import styles from "./Auth.module.css";
+
+/** Live checklist of the password rules, shown under new-password fields. */
+export function PasswordChecklist({ value }: { value: string }) {
+  return (
+    <ul role="list" className={styles.rules}>
+      {PASSWORD_RULES.map((rule) => {
+        const met = rule.test(value);
+        return (
+          <li key={rule.id} className={met ? styles.ruleMet : undefined}>
+            {met ? <Check size={14} aria-hidden="true" /> : <Circle size={14} aria-hidden="true" />}
+            {rule.label}
+            <span className="sr-only">{met ? " (met)" : " (not met yet)"}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "name"> & {
   name: string;
@@ -119,13 +138,14 @@ export function SubmitButton({ submitting, icon, busyLabel, children }: { submit
   );
 }
 
-/** Live region that announces the (demo) outcome of a submission. */
+/** Live region that announces the outcome of a submission (errors, confirmations, next steps). */
 export function FormResult({ result }: { result: AuthResult | null }) {
+  const Icon = result?.status === "error" ? AlertCircle : result?.status === "success" ? CheckCircle2 : Info;
   return (
     <div role="status" aria-live="polite" className={styles.resultSlot}>
       {result && (
-        <div className={styles.result}>
-          <Info size={18} aria-hidden="true" />
+        <div className={cx(styles.result, result.status === "error" && styles.resultError, result.status === "success" && styles.resultSuccess)}>
+          <Icon size={18} aria-hidden="true" />
           <div>
             <p className={styles.resultTitle}>{result.title}</p>
             <p>{result.message}</p>

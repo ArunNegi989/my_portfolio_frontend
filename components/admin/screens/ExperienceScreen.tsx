@@ -3,6 +3,7 @@
 import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { reportSaveError } from "@/lib/admin/errors";
 import { adminActions, newId, useAdminState } from "@/lib/admin/store";
 import { cx, formatRange } from "@/lib/utils";
 import type { Experience } from "@/types/content";
@@ -22,15 +23,20 @@ function ExperienceDialog({ item, isNew, onClose }: { item: Experience; isNew: b
     control,
     handleSubmit,
     setValue,
-    formState: { errors },
+    setError,
+    formState: { errors, isSubmitting },
   } = useForm<Experience & { current: boolean }>({ defaultValues: { ...item, current: item.endDate === null } });
   const current = useWatch({ control, name: "current" });
 
-  const save = handleSubmit(({ current: isCurrent, ...values }) => {
+  const save = handleSubmit(async ({ current: isCurrent, ...values }) => {
     const saved: Experience = { ...values, id: isNew ? newId("x") : values.id, endDate: isCurrent ? null : values.endDate || null, order: Number(values.order) || 1 };
-    adminActions.upsert("experience", saved, `${isNew ? "Added" : "Updated"} experience “${saved.role} — ${saved.company}”`);
-    toast(isNew ? "Experience added" : "Experience saved");
-    onClose();
+    try {
+      await adminActions.upsert("experience", saved, `${isNew ? "Added" : "Updated"} experience “${saved.role} — ${saved.company}”`);
+      toast(isNew ? "Experience added" : "Experience saved");
+      onClose();
+    } catch (err) {
+      reportSaveError(err, toast, setError);
+    }
   });
 
   return (
@@ -44,8 +50,8 @@ function ExperienceDialog({ item, isNew, onClose }: { item: Experience; isNew: b
           <button type="button" className={ui.btn} onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className={cx(ui.btn, ui.btnPrimary)}>
-            Save
+          <button type="submit" className={cx(ui.btn, ui.btnPrimary)} disabled={isSubmitting}>
+            {isSubmitting ? "Saving…" : "Save"}
           </button>
         </>
       }
@@ -121,8 +127,12 @@ export default function ExperienceScreen() {
   async function remove(item: Experience) {
     const ok = await confirm({ title: "Delete experience?", message: `“${item.role} — ${item.company}” will be removed.`, confirmLabel: "Delete", danger: true });
     if (!ok) return;
-    adminActions.remove("experience", item.id, `Deleted experience “${item.role} — ${item.company}”`);
-    toast("Experience deleted");
+    try {
+      await adminActions.remove("experience", item.id, `Deleted experience “${item.role} — ${item.company}”`);
+      toast("Experience deleted");
+    } catch (err) {
+      reportSaveError(err, toast);
+    }
   }
 
   const blank: Experience = { id: "new", role: "", company: "", location: "", startDate: "", endDate: null, summary: "", responsibilities: [], relatedProjectSlugs: [], technologies: [], order: items.length + 1 };

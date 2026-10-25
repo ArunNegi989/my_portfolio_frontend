@@ -1,20 +1,11 @@
 "use client";
 
-// Client-side mock content store for the admin prototype.
-// Seeded from the same /data modules the public site uses; edits go through demoStorage.
+// Client-side content store for the admin dashboard, backed by my-portfolio-backend.
+// Everything is loaded once from GET /admin/content; every action saves through the API first and
+// only updates local state with what the server returned, so the screens always show saved data.
 
 import { useSyncExternalStore } from "react";
-import { posts } from "@/data/blog";
-import { certifications, education } from "@/data/education";
-import { experience } from "@/data/experience";
-import { home } from "@/data/home";
-import { profile } from "@/data/profile";
-import { projects } from "@/data/projects";
-import { pageSeo } from "@/data/seo";
-import { services } from "@/data/services";
-import { settings, socialLinks } from "@/data/settings";
-import { skillCategories, skills } from "@/data/skills";
-import { testimonials } from "@/data/testimonials";
+import { api } from "@/lib/api/client";
 import type {
   BlogPost,
   Certification,
@@ -31,7 +22,6 @@ import type {
   SocialLink,
   Testimonial,
 } from "@/types/content";
-import { demoStorage } from "./storage";
 
 export interface ActivityEntry {
   id: string;
@@ -40,7 +30,6 @@ export interface ActivityEntry {
 }
 
 export interface AdminState {
-  version: 1;
   profile: Profile;
   home: HomeContent;
   settings: SiteSettings;
@@ -61,66 +50,81 @@ export interface AdminState {
 type CollectionKey = {
   [K in keyof AdminState]: AdminState[K] extends Array<{ id: string }> ? K : never;
 }[keyof AdminState];
-/** Values replaced as a whole (skill categories are keyed by `key`, not `id`). */
 type SingletonKey = "profile" | "home" | "settings" | "skillCategories";
 
-function createSeed(): AdminState {
-  return structuredClone({
-    version: 1 as const,
-    profile,
-    home,
-    settings,
-    projects,
-    posts,
-    experience,
-    skills,
-    skillCategories,
-    services,
-    education,
-    certifications,
-    testimonials,
-    socialLinks,
-    seo: pageSeo,
-    activity: [{ id: "seed", message: "Demo content loaded from the /data files", at: "2026-10-24T00:00:00.000Z" }],
-  });
+/** "empty" = the API answered but the database has not been seeded yet. */
+export type AdminStatus = "idle" | "loading" | "ready" | "empty" | "error";
+
+const COLLECTION_PATHS: Record<Exclude<CollectionKey, "activity">, string> = {
+  projects: "/admin/projects",
+  posts: "/admin/posts",
+  experience: "/admin/experience",
+  skills: "/admin/skills",
+  services: "/admin/services",
+  education: "/admin/education",
+  certifications: "/admin/certifications",
+  testimonials: "/admin/testimonials",
+  socialLinks: "/admin/social-links",
+  seo: "/admin/seo",
+};
+
+const SINGLETON_PATHS: Record<SingletonKey, string> = {
+  profile: "/admin/profile",
+  home: "/admin/home",
+  settings: "/admin/settings",
+  skillCategories: "/admin/skill-categories",
+};
+
+// The site URL is deployment configuration (NEXT_PUBLIC_SITE_URL), shown read-only in Settings.
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+
+interface Snapshot {
+  status: AdminStatus;
+  state: AdminState | null;
+  error: string | null;
 }
 
-const SEED = createSeed();
-let state: AdminState = SEED;
-let loaded = false;
+const SERVER_SNAPSHOT: Snapshot = { status: "idle", state: null, error: null };
+let snapshot: Snapshot = SERVER_SNAPSHOT;
+let loading: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
-function ensureLoaded() {
-  if (loaded || typeof window === "undefined") return;
-  loaded = true;
-  const saved = demoStorage.load<AdminState>();
-  if (saved && saved.version === 1) {
-    const seed = createSeed();
-    // Singletons are merged field by field so fields added after the data was saved keep their seed values.
-    state = {
-      ...seed,
-      ...saved,
-      profile: { ...seed.profile, ...saved.profile },
-      home: { ...seed.home, ...saved.home },
-      settings: { ...seed.settings, ...saved.settings },
-    };
-  }
-}
-
-function emit() {
+function set(next: Partial<Snapshot>) {
+  snapshot = { ...snapshot, ...next };
   listeners.forEach((l) => l());
 }
 
-export function newId(prefix: string) {
-  return `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+type ContentResponse = Omit<AdminState, "profile" | "home" | "settings"> & {
+  profile: Profile | null;
+  home: HomeContent | null;
+  settings: Omit<SiteSettings, "siteUrl"> | null;
+};
+
+/** Loads (or reloads) everything the dashboard edits. Concurrent calls share one request. */
+export function loadAdminContent(): Promise<void> {
+  if (loading) return loading;
+  if (snapshot.status !== "ready") set({ status: "loading", error: null });
+  loading = api
+    .get<ContentResponse>("/admin/content")
+    .then((data) => {
+      if (!data.profile || !data.home || !data.settings) {
+        set({ status: "empty", state: null });
+        return;
+      }
+      set({ status: "ready", error: null, state: { ...data, profile: data.profile, home: data.home, settings: { ...data.settings, siteUrl: SITE_URL } } });
+    })
+    .catch((err) => {
+      set({ status: "error", error: err instanceof Error ? err.message : "Couldn't load the dashboard content." });
+    })
+    .finally(() => {
+      loading = null;
+    });
+  return loading;
 }
 
-function commit(next: AdminState, message?: string) {
-  state = message
-    ? { ...next, activity: [{ id: newId("a"), message, at: new Date().toISOString() }, ...next.activity].slice(0, 40) }
-    : next;
-  demoStorage.save(state);
-  emit();
+/** Forgets all loaded content (used on sign-out so nothing stays in memory). */
+export function clearAdminState() {
+  set({ status: "idle", state: null, error: null });
 }
 
 export const adminStore = {
@@ -128,52 +132,91 @@ export const adminStore = {
     listeners.add(listener);
     return () => listeners.delete(listener);
   },
-  getSnapshot() {
-    ensureLoaded();
-    return state;
-  },
-  getServerSnapshot() {
-    return SEED;
-  },
+  getSnapshot: () => snapshot,
+  getServerSnapshot: () => SERVER_SNAPSHOT,
 };
 
-export function useAdminState(): AdminState {
+function useSnapshot() {
   return useSyncExternalStore(adminStore.subscribe, adminStore.getSnapshot, adminStore.getServerSnapshot);
 }
 
-const noop = () => () => {};
-/** False during SSR / hydration, true once running in the browser with stored demo data loaded. */
+export function useAdminStatus() {
+  const { status, error } = useSnapshot();
+  return { status, error };
+}
+
+/**
+ * The loaded content. Screens render only inside AdminShell, which waits for status "ready",
+ * so the state is always present here.
+ */
+export function useAdminState(): AdminState {
+  const { state } = useSnapshot();
+  if (!state) throw new Error("useAdminState() was used before the dashboard content loaded.");
+  return state;
+}
+
+/** True once the dashboard content has loaded. */
 export function useHydrated() {
-  return useSyncExternalStore(noop, () => true, () => false);
+  return useSnapshot().status === "ready";
+}
+
+export function newId(prefix: string) {
+  return `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function current(): AdminState {
+  if (!snapshot.state) throw new Error("Dashboard content is not loaded.");
+  return snapshot.state;
+}
+
+/** Applies a saved change locally and adds it to the activity feed (the server records it too). */
+function commit(next: AdminState, message?: string) {
+  const activity = message ? [{ id: newId("a"), message, at: new Date().toISOString() }, ...next.activity].slice(0, 40) : next.activity;
+  set({ state: { ...next, activity } });
 }
 
 type Item<K extends CollectionKey> = AdminState[K][number];
 
 export const adminActions = {
-  upsert<K extends CollectionKey>(key: K, item: Item<K>, message: string) {
-    const current = state[key] as Array<{ id: string }>;
-    const exists = current.some((x) => x.id === item.id);
-    const next = exists ? current.map((x) => (x.id === item.id ? item : x)) : [...current, item];
-    commit({ ...state, [key]: next }, message);
+  /** Creates the item if its id is new, otherwise replaces it. Resolves with the saved item. */
+  async upsert<K extends Exclude<CollectionKey, "activity">>(key: K, item: Item<K>, message: string): Promise<Item<K>> {
+    const list = current()[key] as Array<{ id: string }>;
+    const exists = list.some((x) => x.id === item.id);
+    const path = COLLECTION_PATHS[key];
+    const saved = exists ? await api.put<Item<K>>(`${path}/${encodeURIComponent(item.id)}`, item) : await api.post<Item<K>>(path, item);
+    const latest = current()[key] as Array<{ id: string }>;
+    const next = exists ? latest.map((x) => (x.id === item.id ? saved : x)) : [...latest, saved];
+    commit({ ...current(), [key]: next }, message);
+    return saved;
   },
-  remove<K extends CollectionKey>(key: K, id: string, message: string) {
-    const current = state[key] as Array<{ id: string }>;
-    commit({ ...state, [key]: current.filter((x) => x.id !== id) }, message);
+
+  async remove<K extends Exclude<CollectionKey, "activity">>(key: K, id: string, message: string) {
+    await api.delete(`${COLLECTION_PATHS[key]}/${encodeURIComponent(id)}`);
+    const latest = current()[key] as Array<{ id: string }>;
+    commit({ ...current(), [key]: latest.filter((x) => x.id !== id) }, message);
   },
-  replace<K extends CollectionKey>(key: K, items: AdminState[K], message: string) {
-    commit({ ...state, [key]: items }, message);
+
+  /** Saves a whole list (reordering, or screens that save every row together). */
+  async replace<K extends Exclude<CollectionKey, "activity">>(key: K, items: AdminState[K], message: string) {
+    const saved = await api.put<AdminState[K]>(COLLECTION_PATHS[key], { items });
+    commit({ ...current(), [key]: saved }, message);
   },
-  update<K extends SingletonKey>(key: K, value: AdminState[K], message: string) {
-    commit({ ...state, [key]: value }, message);
+
+  async update<K extends SingletonKey>(key: K, value: AdminState[K], message: string) {
+    const body = key === "skillCategories" ? { items: value } : value;
+    const saved = await api.put<AdminState[K]>(SINGLETON_PATHS[key], body);
+    const merged = key === "settings" ? { ...(saved as SiteSettings), siteUrl: SITE_URL } : saved;
+    commit({ ...current(), [key]: merged }, message);
   },
-  reset() {
-    demoStorage.clear();
-    state = createSeed();
-    emit();
+
+  /** Discards local state and reloads everything from the server. */
+  async reload() {
+    await loadAdminContent();
   },
+
   exportJson() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { activity, version, ...content } = state;
+    const { activity, ...content } = current();
     return JSON.stringify(content, null, 2);
   },
 };

@@ -5,8 +5,8 @@ import { projects } from "@/data/projects";
 
 export const metadata = { title: "Edit project" };
 
-// Seeded projects are prerendered; ids created in the browser render on demand
-// and are resolved from demo storage on the client.
+// Only the page shell is prerendered (for the seeded ids); other ids render on demand. The project
+// itself is always loaded from the API on the client, after the admin session is confirmed.
 export async function generateStaticParams() {
   return projects.map((p) => ({ id: p.id }));
 }

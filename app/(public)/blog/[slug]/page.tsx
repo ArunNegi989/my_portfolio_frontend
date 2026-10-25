@@ -10,15 +10,17 @@ import ContactCta from "@/components/public/sections/ContactCta";
 import Markdown from "@/components/shared/Markdown";
 import SmartImage from "@/components/shared/SmartImage";
 import TagList from "@/components/shared/TagList";
-import { posts as allPostData } from "@/data/blog";
 import { getPostBySlug, getPosts, getSettings } from "@/lib/data";
 import { getToc, parseMarkdown } from "@/lib/markdown";
 import { buildMetadata } from "@/lib/seo";
 import { absoluteUrl, cx, formatDate, readingTime } from "@/lib/utils";
 import styles from "./article.module.css";
 
+// Articles published later are rendered on their first visit. Cache Components needs at least one
+// param at build time, so an empty list yields a placeholder that resolves to notFound().
 export async function generateStaticParams() {
-  return allPostData.filter((p) => p.status === "published").map((p) => ({ slug: p.slug }));
+  const posts = await getPosts();
+  return posts.length ? posts.map((p) => ({ slug: p.slug })) : [{ slug: "__placeholder__" }];
 }
 
 export async function generateMetadata({ params }: PageProps<"/blog/[slug]">) {
