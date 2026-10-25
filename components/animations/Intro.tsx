@@ -24,7 +24,7 @@ const FULL_DURATION = 7500;
 const REDUCED_TIMELINE: Array<[Phase, number]> = [["open", 900]];
 const REDUCED_DURATION = 1700;
 
-const LINES = ["ARUN NEGI", "PORTFOLIO.EXE"];
+const LINES = ["ARUN NEGI", "PORTFOLIO"];
 const SHARDS = [
   "polygon(0 0, 55% 0, 45% 52%, 0 60%)",
   "polygon(55% 0, 100% 0, 100% 45%, 45% 52%)",
@@ -182,7 +182,7 @@ function IntroOverlay() {
       {!reduced && <IntroCharacter phase={phase} visible={after("descend")} />}
 
       <div className={styles.hud} aria-hidden="true">
-        <span>AN. {"//"} PORTFOLIO.EXE</span>
+        <span>AN. {"//"} PORTFOLIO</span>
         <span className={styles.progress}>
           <motion.span
             className={styles.progressBar}
