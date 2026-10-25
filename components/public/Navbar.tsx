@@ -123,6 +123,8 @@ function NavbarView({ items, phone, email, pathname }: NavbarProps & { pathname:
             id="mobile-menu"
             aria-label="Mobile"
             className={styles.mobileMenu}
+            // Lenis is stopped while the menu is open and would otherwise swallow wheel scrolling inside it.
+            data-lenis-prevent
             initial={{ clipPath: "inset(0 0 100% 0)" }}
             animate={{ clipPath: "inset(0 0 0% 0)" }}
             exit={{ clipPath: "inset(0 0 100% 0)" }}
