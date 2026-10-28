@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element -- admin thumbnails can use any host */
-import { Copy, ExternalLink, Globe, Pencil, Plus, Search, Star, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, ExternalLink, Globe, Pencil, Plus, Search, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { reportSaveError } from "@/lib/admin/errors";
@@ -11,6 +11,8 @@ import ui from "../admin.module.css";
 import { useFeedback } from "../Feedback";
 import { EmptyState, PageHeader, StatusBadge } from "../ui";
 
+const PAGE_SIZE = 10;
+
 export default function ProjectsTable() {
   const { projects } = useAdminState();
   const { toast, confirm } = useFeedback();
@@ -18,6 +20,7 @@ export default function ProjectsTable() {
   const [category, setCategory] = useState("all");
   const [status, setStatus] = useState("all");
   const [featuredOnly, setFeaturedOnly] = useState(false);
+  const [page, setPage] = useState(1);
 
   const categories = useMemo(() => Array.from(new Set(projects.map((p) => p.category))).sort(), [projects]);
   const rows = useMemo(() => {
@@ -32,6 +35,12 @@ export default function ProjectsTable() {
           (!q || `${p.title} ${p.slug} ${p.technologies.join(" ")}`.toLowerCase().includes(q)),
       );
   }, [projects, query, category, status, featuredOnly]);
+
+  // Pagination: delete ke baad last page khali ho jaye to pichle page pe aa jata hai
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const pagedRows = rows.slice(startIndex, startIndex + PAGE_SIZE);
 
   async function remove(id: string, title: string) {
     const ok = await confirm({ title: "Delete project?", message: `“${title}” will be permanently deleted.`, confirmLabel: "Delete", danger: true });
@@ -85,21 +94,53 @@ export default function ProjectsTable() {
         <label className={ui.searchBox}>
           <Search size={15} aria-hidden="true" />
           <span className="sr-only">Search projects</span>
-          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title, slug or technology" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search title, slug or technology"
+          />
         </label>
-        <select className={ui.select} value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Filter by category">
+        <select
+          className={ui.select}
+          value={category}
+          onChange={(e) => {
+            setCategory(e.target.value);
+            setPage(1);
+          }}
+          aria-label="Filter by category"
+        >
           <option value="all">All categories</option>
           {categories.map((c) => (
             <option key={c}>{c}</option>
           ))}
         </select>
-        <select className={ui.select} value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by status">
+        <select
+          className={ui.select}
+          value={status}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}
+          aria-label="Filter by status"
+        >
           <option value="all">Any status</option>
           <option value="published">Published</option>
           <option value="draft">Draft</option>
         </select>
         <label className={ui.btn}>
-          <input type="checkbox" checked={featuredOnly} onChange={(e) => setFeaturedOnly(e.target.checked)} /> Featured only
+          <input
+            type="checkbox"
+            checked={featuredOnly}
+            onChange={(e) => {
+              setFeaturedOnly(e.target.checked);
+              setPage(1);
+            }}
+          />{" "}
+          Featured only
         </label>
       </div>
 
@@ -110,7 +151,17 @@ export default function ProjectsTable() {
             message={filtered ? "Try clearing the search or filters." : "Create your first project to get started."}
             action={
               filtered ? (
-                <button type="button" className={ui.btn} onClick={() => { setQuery(""); setCategory("all"); setStatus("all"); setFeaturedOnly(false); }}>
+                <button
+                  type="button"
+                  className={ui.btn}
+                  onClick={() => {
+                    setQuery("");
+                    setCategory("all");
+                    setStatus("all");
+                    setFeaturedOnly(false);
+                    setPage(1);
+                  }}
+                >
                   Clear filters
                 </button>
               ) : (
@@ -132,7 +183,7 @@ export default function ProjectsTable() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((p) => {
+              {pagedRows.map((p) => {
                 const onPublicSite = p.status === "published";
                 return (
                   <tr key={p.id}>
@@ -200,9 +251,27 @@ export default function ProjectsTable() {
           </table>
         )}
       </div>
-      <p className={ui.muted} style={{ marginTop: 10, fontSize: "0.82rem" }}>
-        {rows.length} of {projects.length} projects
-      </p>
+
+      <div className={ui.pagination}>
+        <p className={ui.muted} style={{ fontSize: "0.82rem" }}>
+          {rows.length === 0
+            ? `0 of ${projects.length} projects`
+            : `Showing ${startIndex + 1}–${Math.min(startIndex + PAGE_SIZE, rows.length)} of ${rows.length} projects`}
+        </p>
+        {totalPages > 1 && (
+          <nav className={ui.pageControls} aria-label="Projects pagination">
+            <button type="button" className={ui.btn} onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1}>
+              <ChevronLeft size={15} aria-hidden="true" /> Previous
+            </button>
+            <span className={ui.pageInfo}>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button type="button" className={ui.btn} onClick={() => setPage(currentPage + 1)} disabled={currentPage === totalPages}>
+              Next <ChevronRight size={15} aria-hidden="true" />
+            </button>
+          </nav>
+        )}
+      </div>
     </>
   );
 }

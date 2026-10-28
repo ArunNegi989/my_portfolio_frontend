@@ -185,3 +185,20 @@
     padding: 28px;
   }
 }
+
+.loadMoreBtn {
+  min-height: 48px;
+  padding: 10px 28px;
+  border: 1px solid var(--cyan);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--cyan);
+  transition: background 0.2s, color 0.2s;
+}
+
+.loadMoreBtn:hover {
+  background: var(--cyan);
+  color: #021015;
+}

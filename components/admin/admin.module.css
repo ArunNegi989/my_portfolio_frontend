@@ -461,3 +461,26 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Pagination */
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.pageControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pageInfo {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}

@@ -10,10 +10,14 @@ import styles from "./Explorer.module.css";
 
 type Sort = "featured" | "az" | "recent";
 
+const INITIAL_COUNT = 9; // pehli baar mai kitne dikhane hain
+const LOAD_MORE_COUNT = 6; // har click pe kitne aur dikhane hain
+
 export default function ProjectsExplorer({ projects, categories }: { projects: Project[]; categories: string[] }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState<Sort>("featured");
+  const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
   const deferredQuery = useDeferredValue(query);
   const reduce = useReducedMotion();
 
@@ -31,11 +35,15 @@ export default function ProjectsExplorer({ projects, categories }: { projects: P
     });
   }, [projects, deferredQuery, category, sort]);
 
+  const visibleResults = results.slice(0, visibleCount);
+  const hasMore = visibleCount < results.length;
+
   const filtersActive = query !== "" || category !== "All" || sort !== "featured";
   const clear = () => {
     setQuery("");
     setCategory("All");
     setSort("featured");
+    setVisibleCount(INITIAL_COUNT);
   };
 
   return (
@@ -47,13 +55,22 @@ export default function ProjectsExplorer({ projects, categories }: { projects: P
           <input
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setVisibleCount(INITIAL_COUNT);
+            }}
             placeholder="Search by name or technology (e.g. Next.js, MongoDB)"
           />
         </label>
         <label className={styles.sort}>
           <span>Sort</span>
-          <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+          <select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value as Sort);
+              setVisibleCount(INITIAL_COUNT);
+            }}
+          >
             <option value="featured">Featured first</option>
             <option value="recent">Most recent</option>
             <option value="az">A – Z</option>
@@ -68,7 +85,10 @@ export default function ProjectsExplorer({ projects, categories }: { projects: P
             type="button"
             className={cx(styles.filter, category === c && styles.filterActive)}
             aria-pressed={category === c}
-            onClick={() => setCategory(c)}
+            onClick={() => {
+              setCategory(c);
+              setVisibleCount(INITIAL_COUNT);
+            }}
           >
             {c}
           </button>
@@ -81,7 +101,7 @@ export default function ProjectsExplorer({ projects, categories }: { projects: P
       </div>
 
       <p className={styles.count} aria-live="polite">
-        Showing {results.length} of {projects.length} projects
+        Showing {visibleResults.length} of {results.length} projects
       </p>
 
       {results.length === 0 ? (
@@ -93,25 +113,39 @@ export default function ProjectsExplorer({ projects, categories }: { projects: P
           </button>
         </div>
       ) : (
-        <motion.ul layout role="list" className={styles.grid}>
-          <AnimatePresence mode="popLayout">
-            {results.map((project, i) => (
-              <motion.li
-                key={project.id}
-                layout
-                initial={reduce ? false : { opacity: 0, y: 28, scale: 0.97 }}
-                whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                viewport={{ once: true, margin: "0px 0px -6% 0px" }}
-                exit={{ opacity: 0, scale: 0.96 }}
-                transition={{ duration: 0.5, delay: (i % 3) * 0.07, ease: [0.16, 1, 0.3, 1] }}
-                className={cx(styles.item, project.featured && styles.featuredItem)}
+        <>
+          <motion.ul layout role="list" className={styles.grid}>
+            <AnimatePresence mode="popLayout">
+              {visibleResults.map((project, i) => (
+                <motion.li
+                  key={project.id}
+                  layout
+                  initial={reduce ? false : { opacity: 0, y: 28, scale: 0.97 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true, margin: "0px 0px -6% 0px" }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ duration: 0.5, delay: (i % 3) * 0.07, ease: [0.16, 1, 0.3, 1] }}
+                  className={cx(styles.item, project.featured && styles.featuredItem)}
+                >
+                  {project.featured && <span className={styles.featuredBadge}>Featured</span>}
+                  <ProjectCard project={project} variant="compact" headingLevel="h2" />
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </motion.ul>
+
+          {hasMore && (
+            <div className={styles.loadMore}>
+              <button
+                type="button"
+                className={styles.loadMoreBtn}
+                onClick={() => setVisibleCount((c) => c + LOAD_MORE_COUNT)}
               >
-                {project.featured && <span className={styles.featuredBadge}>Featured</span>}
-                <ProjectCard project={project} variant="compact" headingLevel="h2" />
-              </motion.li>
-            ))}
-          </AnimatePresence>
-        </motion.ul>
+                Load more
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
