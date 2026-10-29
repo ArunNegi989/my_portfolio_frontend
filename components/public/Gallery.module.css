@@ -20,7 +20,7 @@
   position: relative;
   display: block;
   width: 100%;
-  height: clamp(220px, 28vw, 380px);
+  height: clamp(220px, 28vw, 420px);
   padding: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
