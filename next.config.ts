@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   experimental: {
     agentFeedback: true,
   },
-  cacheComponents: true,
+  cacheComponents: false,
   partialPrefetching: false,
   images: {
     remotePatterns: [
