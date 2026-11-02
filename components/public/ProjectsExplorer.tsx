@@ -10,8 +10,8 @@ import styles from "./Explorer.module.css";
 
 type Sort = "featured" | "az" | "recent";
 
-const INITIAL_COUNT = 9; // pehli baar mai kitne dikhane hain
-const LOAD_MORE_COUNT = 6; // har click pe kitne aur dikhane hain
+const INITIAL_COUNT = 9; 
+const LOAD_MORE_COUNT = 6; 
 
 export default function ProjectsExplorer({ projects, categories }: { projects: Project[]; categories: string[] }) {
   const [query, setQuery] = useState("");

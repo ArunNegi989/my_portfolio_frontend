@@ -1,4 +1,3 @@
-
 import { ArrowUpRight, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { GithubIcon } from "@/components/shared/BrandIcons";
@@ -28,7 +27,6 @@ export default function ProjectCard({
     <article className={cx(styles.card, styles[variant])}>
       <Link
         href={href}
-        prefetch={false}
         className={styles.media}
         aria-label={`View ${project.title} case study`}
       >
@@ -63,7 +61,7 @@ export default function ProjectCard({
         </div>
 
         <Heading className={styles.title}>
-          <Link href={href} prefetch={false}>
+          <Link href={href}>
             {project.title}
           </Link>
         </Heading>
@@ -81,7 +79,6 @@ export default function ProjectCard({
         <div className={styles.links}>
           <Link
             href={href}
-            prefetch={false}
             className={styles.primaryLink}
           >
             View Case Study

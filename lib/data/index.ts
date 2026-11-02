@@ -88,14 +88,14 @@ const unseeded = <T>(name: string, value: T) => () => {
 
 export async function getProfile(): Promise<Profile> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("profile");
   return read("/profile", () => staticProfile, unseeded("profile", staticProfile));
 }
 
 export async function getSettings(): Promise<SiteSettings> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("settings");
   const stored = await read<Omit<SiteSettings, "siteUrl">>("/settings", () => staticSettings, unseeded("settings", staticSettings));
   // The site URL is deployment configuration (NEXT_PUBLIC_SITE_URL), not database content.
@@ -109,28 +109,28 @@ export async function getNavigation() {
 
 export async function getSocialLinks(): Promise<SocialLink[]> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("social-links");
   return read("/social-links", () => staticSocialLinks.filter((link) => link.visible));
 }
 
 export async function getHomeContent(): Promise<HomeContent> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("home");
   return read("/home", () => staticHome, unseeded("homepage content", staticHome));
 }
 
 export async function getProjects(): Promise<Project[]> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("projects");
   return readAll<Project>("/projects", () => staticProjects.filter((p) => p.status === "published").sort(byOrder));
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("projects");
   return read<Project | null>(
     `/projects/${encodeURIComponent(slug)}`,
@@ -152,14 +152,14 @@ export async function getProjectsBySlugs(slugs: string[]): Promise<Project[]> {
 
 export async function getPosts(): Promise<BlogPost[]> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("posts");
   return readAll<BlogPost>("/posts", () => staticPosts.filter((p) => p.status === "published").sort(byDateDesc));
 }
 
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("posts");
   return read<BlogPost | null>(
     `/posts/${encodeURIComponent(slug)}`,
@@ -170,28 +170,28 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
 
 export async function getExperience(): Promise<Experience[]> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("experience");
   return read("/experience", () => [...staticExperience].sort(byOrder));
 }
 
 export async function getSkills(): Promise<{ categories: SkillCategory[]; skills: Skill[] }> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("skills");
   return read("/skills", () => ({ categories: staticSkillCategories, skills: [...staticSkills].sort(byOrder) }));
 }
 
 export async function getServices(): Promise<Service[]> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("services");
   return read("/services", () => staticServices.filter((s) => s.visible).sort(byOrder));
 }
 
 export async function getEducation(): Promise<{ education: Education[]; certifications: Certification[] }> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("education");
   return read("/education", () => ({ education: staticEducation, certifications: staticCertifications }));
 }
@@ -199,14 +199,14 @@ export async function getEducation(): Promise<{ education: Education[]; certific
 /** Only real (non-demo), visible testimonials ever reach the public site (filtered by the API too). */
 export async function getPublicTestimonials(): Promise<Testimonial[]> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("testimonials");
   return read("/testimonials", () => staticTestimonials.filter((t) => !t.isDemo && t.visible));
 }
 
 export async function getAllPageSeo(): Promise<PageSeo[]> {
   "use cache";
-  cacheLife("minutes");
+  cacheLife("content");
   cacheTag("seo");
   return read("/seo", () => staticPageSeo);
 }
